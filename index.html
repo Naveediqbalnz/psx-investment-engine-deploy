@@ -18,7 +18,11 @@
     <p>Sign in to open your research file.</p>
     <div class="field"><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
     <div class="field"><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
-    <div class="gaterow"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp">Create account</button></div>
+    <div class="gaterow" id="standardAuthActions"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp">Create account</button><button class="btn" id="forgotPw">Forgot password</button></div>
+    <div id="recoveryBox" hidden>
+      <div class="field"><label for="newPw">New password</label><input type="password" id="newPw" autocomplete="new-password"></div>
+      <div class="gaterow"><button class="btn primary" id="setNewPw">Set new password</button></div>
+    </div>
     <p class="gatemsg" id="gateMsg"></p>
   </div>
 </div>
