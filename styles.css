@@ -193,6 +193,26 @@ ul.tight li{margin-bottom:5px}
 .verify.missing{background:var(--sunken);color:var(--ink-3)}
 .coverage-mini{font-size:11px;color:var(--ink-2);white-space:nowrap}
 
+.company-directory-hero{margin-bottom:16px}
+.directory-controls{display:grid;grid-template-columns:minmax(260px,1.5fr) minmax(190px,1fr) minmax(145px,.6fr);gap:10px 12px;align-items:end;background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:14px 15px;box-shadow:var(--shadow-sm)}
+.directory-search,.directory-filter{display:flex;flex-direction:column;gap:4px}
+.directory-search label,.directory-filter label{font-size:11px;font-weight:600;color:var(--ink-2)}
+.directory-search input{min-width:0}
+.directory-check{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink-2);cursor:pointer;min-height:34px}
+.directory-check input{width:16px;height:16px;accent-color:var(--accent)}
+.directory-summary{display:flex;align-items:baseline;gap:6px;margin:14px 2px 9px;color:var(--ink-2);font-size:12px}
+.directory-summary strong{font-family:var(--serif);font-size:20px;color:var(--ink);font-weight:500}
+.directory-summary .textbtn{margin-left:auto}
+.company-directory{max-height:calc(100vh - 300px);min-height:320px}
+.company-directory thead{position:sticky;top:0;background:var(--surface);z-index:2}
+.company-directory .company-name{min-width:220px}
+.entitytag,.boardtag,.tradestatus{display:inline-flex;white-space:nowrap;border:1px solid var(--rule);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--ink-2);background:var(--sunken)}
+.boardtag.gem{border-color:var(--warn);color:var(--warn);background:var(--warn-soft)}
+.tradestatus.active{border-color:color-mix(in srgb,var(--accent) 45%,var(--rule));color:var(--accent);background:var(--accent-soft)}
+.tradestatus.inactive{border-color:var(--alert);color:var(--alert);background:var(--alert-soft)}
+@media (max-width:980px){.directory-controls{grid-template-columns:1fr 1fr}.directory-search{grid-column:1/-1}}
+@media (max-width:620px){.directory-controls{grid-template-columns:1fr}.directory-search{grid-column:auto}.company-directory{max-height:none}.company-directory-hero .factbar{min-width:0;width:100%}}
+
 
 /* ===== v0.2 frontend polish ===== */
 :root{

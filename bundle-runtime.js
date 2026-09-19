@@ -87,6 +87,45 @@ function bind(){
     document.addEventListener("click",e=>{if(gw&&!gw.contains(e.target)) gr.hidden=true;},{once:true});
   }
 
+  const directorySearch=$("#companyDirectorySearch");
+  if(directorySearch){
+    const sectorFilter=$("#companySectorFilter");
+    const boardFilter=$("#companyBoardFilter");
+    const includeOther=$("#includeOtherEntities");
+    const includeInactive=$("#includeInactiveCompanies");
+    const visibleCount=$("#companyVisibleCount");
+    const empty=$("#companyDirectoryEmpty");
+    const applyDirectoryFilters=()=>{
+      const q=String(directorySearch.value||"").trim().toUpperCase();
+      const sector=String(sectorFilter.value||"");
+      const board=String(boardFilter.value||"");
+      let shown=0;
+      document.querySelectorAll("[data-company-row]").forEach(row=>{
+        const matchesText=!q||String(row.dataset.search||"").includes(q);
+        const matchesSector=!sector||row.dataset.sector===sector;
+        const matchesBoard=!board||row.dataset.board===board;
+        const matchesType=includeOther.checked||row.dataset.entity==="Company";
+        const matchesActive=includeInactive.checked||row.dataset.active==="true";
+        const show=matchesText&&matchesSector&&matchesBoard&&matchesType&&matchesActive;
+        row.hidden=!show;
+        if(show) shown++;
+      });
+      visibleCount.textContent=shown.toLocaleString();
+      empty.hidden=shown!==0;
+    };
+    [directorySearch,sectorFilter,boardFilter,includeOther,includeInactive].forEach(el=>{
+      el.oninput=applyDirectoryFilters;
+      el.onchange=applyDirectoryFilters;
+    });
+    const reset=$("#resetCompanyFilters");
+    if(reset) reset.onclick=()=>{
+      directorySearch.value=""; sectorFilter.value=""; boardFilter.value="";
+      includeOther.checked=false; includeInactive.checked=false;
+      applyDirectoryFilters(); directorySearch.focus();
+    };
+    applyDirectoryFilters();
+  }
+
   document.querySelectorAll("[data-macro]").forEach(el=>{
     el.oninput=el.onchange=()=>{state.macro[el.dataset.macro]=el.value; saveMacro();}; mark(el);});
 

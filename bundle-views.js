@@ -192,24 +192,63 @@ function structHTML(s,st){
       +'<textarea id="s_'+f[0]+'" data-sec="'+s.id+'" data-field="st_'+f[0]+'" rows="3">'+esc(st["st_"+f[0]]||"")+'</textarea></div>').join("");
 }
 
+function companyEntityType(c){
+  const sector=String(c.sectorName||c.masterRecord&&c.masterRecord.sector||"").toUpperCase();
+  if(sector.includes("MODARABA")) return "Modaraba";
+  if(sector.includes("MUTUAL FUND")||sector.includes("EXCHANGE TRADED FUND")) return "Fund";
+  if(sector.includes("REAL ESTATE INVESTMENT TRUST")||sector==="REIT") return "REIT";
+  return "Company";
+}
+function companyDirectoryRows(){
+  return companyDisplayRecords().map(c=>{
+    const masterRecord=masterCompanyByTicker(c.ticker)||{};
+    return Object.assign({},c,{
+      masterRecord,
+      entityType:companyEntityType(Object.assign({},c,{masterRecord})),
+      board:masterRecord.is_gem===true?"GEM":"Main",
+      active:masterRecord.tradable_current!==false,
+      marketCap:masterRecord.market_cap_pkr_m,
+      freeFloat:masterRecord.free_float_pct,
+      priceDate:masterRecord.price_date,
+      reportPeriod:masterRecord.latest_report_period
+    });
+  });
+}
 function companiesHTML(){
-  const list=companyDisplayRecords();
+  const list=companyDirectoryRows();
+  const sectors=[...new Set(list.map(c=>c.sectorName||c.masterRecord.sector||"").filter(Boolean))].sort();
+  const companyCount=list.filter(c=>c.entityType==="Company").length;
+  const otherCount=list.length-companyCount;
   const rows=list.map(c=>{
-    const d=daysSince(c.updatedAt);
-    const sectorLabel=c.sectorName||secName(c.sector);
-    return "<tr><td class='pad'><a href='#' data-nav='company' data-id='"+esc(c.ticker)+"'><strong>"+esc(c.ticker)+"</strong></a></td>"
-      +"<td class='pad'>"+esc(c.name||"—")+"</td><td class='pad'>"+esc(sectorLabel||"—")+"</td>"
-      +"<td class='pad'>"+esc(c.coverage||"—")+"</td>"
-      +"<td class='pad'>"+verificationBadge(c.dataCoverage&&c.dataCoverage.verification_status)+"</td>"
-      +"<td class='pad'>"+coverageSummary(c.dataCoverage)+"</td>"
+    const sectorLabel=c.sectorName||c.masterRecord.sector||secName(c.sector);
+    const search=[c.ticker,c.name,sectorLabel,c.entityType,c.board].join(" ").toUpperCase();
+    return '<tr data-company-row data-search="'+esc(search)+'" data-sector="'+esc(sectorLabel)+'" data-entity="'+esc(c.entityType)+'" data-board="'+esc(c.board)+'" data-active="'+(c.active?"true":"false")+'">'
+      +"<td class='pad'><a href='#' data-nav='company' data-id='"+esc(c.ticker)+"'><strong>"+esc(c.ticker)+"</strong></a></td>"
+      +"<td class='pad company-name'>"+esc(c.name||"—")+"</td><td class='pad'>"+esc(sectorLabel||"—")+"</td>"
+      +'<td class="pad"><span class="entitytag">'+esc(c.entityType)+'</span></td>'
+      +'<td class="pad"><span class="boardtag '+(c.board==="GEM"?"gem":"")+'">'+esc(c.board)+'</span></td>'
+      +'<td class="pad"><span class="tradestatus '+(c.active?"active":"inactive")+'">'+(c.active?"Active":"Inactive")+'</span></td>'
       +"<td class='pad num'>"+fmtSmart(c.price,2)+"</td>"
-      +"<td class='pad'>"+esc((c.thesis||"").slice(0,70)||"—")+"</td><td class='pad num'>"+(d===null?"—":d+"d")+"</td></tr>";
+      +"<td class='pad'>"+fmtDate(c.priceDate)+"</td>"
+      +"<td class='pad num'>"+fmtSmart(c.marketCap,1)+"</td>"
+      +"<td class='pad num'>"+(c.freeFloat==null?"—":fmtSmart(c.freeFloat,1)+"%")+"</td>"
+      +"<td class='pad'>"+fmtDate(c.reportPeriod)+"</td>"
+      +"<td class='pad'>"+esc(c.coverage||"—")+"</td></tr>";
   }).join("");
-  return '<h2 class="section">Company research</h2>'
-    +'<p class="sub">Live PSX company universe from Supabase. Identity, price and structured financial history come from the database; your valuation and judgement notes remain personal overlays.</p>'
-    +'<p><button class="btn primary" data-nav="masters">View master data</button></p>'
-    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Research</th><th>Verification</th><th>Data rows</th><th class="num">Price</th><th>Thesis</th><th class="num">Updated</th></tr></thead><tbody>'
-    +(rows||'<tr><td class="pad empty" colspan="9">No company data available.</td></tr>')+'</tbody></table></div>';
+  return '<div class="pagehero company-directory-hero"><div><div class="eyebrow">PSX DIRECTORY</div><h2 class="section">All listed entities</h2>'
+    +'<p class="sub">Search the complete live universe. Operating companies are shown by default; include funds, modarabas and REITs when needed.</p></div>'
+    +'<div class="factbar"><span class="factpill"><b>'+fmtSmart(companyCount)+'</b>Operating companies</span><span class="factpill"><b>'+fmtSmart(otherCount)+'</b>Other securities</span></div></div>'
+    +'<div class="directory-controls">'
+      +'<div class="directory-search"><label for="companyDirectorySearch">Find company or ticker</label><input id="companyDirectorySearch" type="search" placeholder="e.g. MEBL or Meezan Bank" autocomplete="off"></div>'
+      +'<div class="directory-filter"><label for="companySectorFilter">Sector</label><select id="companySectorFilter"><option value="">All sectors</option>'+sectors.map(s=>'<option value="'+esc(s)+'">'+esc(s)+'</option>').join("")+'</select></div>'
+      +'<div class="directory-filter"><label for="companyBoardFilter">Board</label><select id="companyBoardFilter"><option value="">All boards</option><option value="Main">Main Board</option><option value="GEM">GEM Board</option></select></div>'
+      +'<label class="directory-check"><input id="includeOtherEntities" type="checkbox"> Include funds, modarabas and REITs</label>'
+      +'<label class="directory-check"><input id="includeInactiveCompanies" type="checkbox"> Include inactive records</label>'
+    +'</div>'
+    +'<div class="directory-summary"><strong id="companyVisibleCount">'+fmtSmart(companyCount)+'</strong><span>entities shown</span><button class="textbtn" type="button" id="resetCompanyFilters">Reset filters</button></div>'
+    +'<div class="scroll company-directory"><table><thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Type</th><th>Board</th><th>Status</th><th class="num">Price</th><th>Price date</th><th class="num">Market cap PKR m</th><th class="num">Free float</th><th>Latest report</th><th>Coverage</th></tr></thead><tbody>'
+    +(rows||'<tr><td class="pad empty" colspan="12">No listed entities available.</td></tr>')+'</tbody></table></div>'
+    +'<p class="empty" id="companyDirectoryEmpty" hidden>No entities match these filters.</p>';
 }
 
 ;
@@ -647,6 +686,84 @@ function bankCompanyHTML(t,c,master,dc){
   }
   return header+body;
 }
+function companyEvidenceLink(row){
+  const doc=sourceDocumentById(row&&row.source_document_id);
+  const url=safeHttpsUrl(row&&row.source_url)||safeHttpsUrl(doc&&doc.source_url);
+  const label=(row&&row.source_name)||(doc&&doc.source_name)||(doc&&doc.title)||"Source";
+  return url?'<a href="'+esc(url)+'" target="_blank" rel="noreferrer">'+esc(label)+'</a>':esc(label||"—");
+}
+function genericCompanyHTML(t,c,master,dc){
+  const fs=companyLiveFinancials(t);
+  const ratios=companyLiveRatios(t);
+  const valuation=companyLatestValuation(t);
+  const docs=companySourceDocuments(t);
+  const events=companyLiveEvents(t);
+  const tab=route.companyTab||"overview";
+  const tabs=[["overview","Overview"],["financials","Financials"],["ratios","Ratios"],["valuation","Valuation"],["news","News"],["analysis","Research"],["sources","Sources"]]
+    .map(x=>'<button class="companytab" data-company-tab="'+x[0]+'" aria-selected="'+(tab===x[0])+'">'+x[1]+'</button>').join("");
+  const sector=master.sector||c.sectorName||secName(c.sector);
+  const price=num(master.last_price!=null?master.last_price:c.price);
+  const latestF=fs[0]||{};
+  const latestR=ratios[0]||{};
+  const coverageParts=[Number(dc&&dc.financial_rows||0)>0,Number(dc&&dc.ratio_rows||0)>0,Number(dc&&dc.price_rows||0)>0,Number(dc&&dc.valuation_rows||0)>0];
+  const coverageScore=coverageParts.filter(Boolean).length;
+  const coverageLabel=coverageScore===4?"Full model":coverageScore>=2?"Partial model":"Market profile";
+  const header='<p class="meta"><a href="#" data-nav="companies">Companies</a> / '+esc(sector)+'</p>'
+    +'<div class="companyhero"><div><div class="eyebrow">'+esc(sector)+'</div><h2 class="section">'+esc(t)+' — '+esc(c.name||master.company_name||"")+'</h2>'
+    +'<p class="sub">Common PSX research model with verified facts, explicit data gaps and sector-aware analysis.</p></div>'
+    +'<div class="companyquote"><span>Last price</span><strong>Rs '+fmtSmart(price,2)+'</strong><small>'+fmtDate(master.price_date)+'</small></div></div>'
+    +'<div class="companyfacts">'
+      +'<span><b>'+esc(coverageLabel)+'</b>Coverage</span><span><b>'+fmtSmart(master.market_cap_pkr_m,1)+'</b>Market cap PKR m</span>'
+      +'<span><b>'+fmtSmart(master.shares_m,2)+'</b>Shares m</span><span><b>'+(master.free_float_pct==null?"—":fmtSmart(master.free_float_pct,1)+"%")+'</b>Free float</span>'
+      +'<span><b>'+esc(master.latest_report_period||"—")+'</b>Latest report</span><span>'+verificationBadge(master.profile_verification_status||"MISSING")+'<small>Profile</small></span>'
+    +'</div><div class="companytabs" role="tablist">'+tabs+'</div>';
+  let body="";
+  if(tab==="overview"){
+    body='<div class="bank-kpis four">'
+      +'<div class="kpi"><div class="k">Revenue</div><div class="v">'+pkrBnLabel(latestF.revenue,1)+'</div><small>'+fmtDate(latestF.period_end)+'</small></div>'
+      +'<div class="kpi"><div class="k">Profit after tax</div><div class="v">'+pkrBnLabel(latestF.profit_after_tax,1)+'</div><small>'+fmtDate(latestF.period_end)+'</small></div>'
+      +'<div class="kpi"><div class="k">EPS</div><div class="v">'+fmtSmart(latestF.eps,2)+'</div><small>'+esc(latestF.period_type||"—")+'</small></div>'
+      +'<div class="kpi"><div class="k">ROE</div><div class="v">'+(latestR.roe_pct==null?"—":fmtSmart(latestR.roe_pct,1)+"%")+'</div><small>'+fmtDate(latestR.as_of)+'</small></div>'
+    +'</div><div class="sectionline"><h3 class="block">Model coverage</h3><span>Missing fields are never estimated</span></div>'
+    +'<div class="datagaps">'
+      +bankDataGap("Market price",Number(dc&&dc.price_rows||0)>0,"Official dated market record")
+      +bankDataGap("Financial history",Number(dc&&dc.financial_rows||0)>0,fmtSmart(dc&&dc.financial_rows||0)+" structured rows")
+      +bankDataGap("Ratio history",Number(dc&&dc.ratio_rows||0)>0,fmtSmart(dc&&dc.ratio_rows||0)+" structured rows")
+      +bankDataGap("Valuation",Number(dc&&dc.valuation_rows||0)>0,"Model assumptions must be explicit")
+    +'</div><div class="sectionline"><h3 class="block">Investment lens</h3><span>Analyst judgement, separate from reported facts</span></div>'
+    +'<div class="analysisgrid"><div class="analysispanel"><div class="analysislabel">THESIS</div><p>'+esc(master.investment_thesis||"Not researched yet.")+'</p></div>'
+      +'<div class="analysispanel"><div class="analysislabel">KEY RISK</div><p>'+esc(master.key_risk||"Not researched yet.")+'</p></div>'
+      +'<div class="analysispanel"><div class="analysislabel">NEXT CATALYST</div><p>'+esc(master.next_catalyst||"Not researched yet.")+'</p></div></div>';
+  }else if(tab==="financials"){
+    const rows=fs.map(r=>'<tr><td class="pad">'+fmtDate(r.period_end)+'</td><td class="pad">'+esc(r.period_type||"—")+'</td>'
+      +'<td class="pad num">'+pkrBn(r.revenue,2)+'</td><td class="pad num">'+pkrBn(r.gross_profit,2)+'</td><td class="pad num">'+pkrBn(r.operating_profit,2)+'</td>'
+      +'<td class="pad num">'+pkrBn(r.profit_after_tax,2)+'</td><td class="pad num">'+fmtSmart(r.eps,3)+'</td><td class="pad num">'+pkrBn(r.total_assets,2)+'</td>'
+      +'<td class="pad num">'+pkrBn(r.total_equity,2)+'</td><td class="pad num">'+pkrBn(r.total_debt,2)+'</td><td class="pad">'+verificationBadge(r.verification_status||"MISSING")+'</td><td class="pad">'+companyEvidenceLink(r)+'</td></tr>').join("");
+    body='<div class="sectionline"><h3 class="block">Financial history</h3><span>PKR bn except EPS</span></div><div class="scroll"><table><thead><tr><th>Period</th><th>Type</th><th class="num">Revenue</th><th class="num">Gross profit</th><th class="num">Operating profit</th><th class="num">PAT</th><th class="num">EPS</th><th class="num">Assets</th><th class="num">Equity</th><th class="num">Debt</th><th>Status</th><th>Source</th></tr></thead><tbody>'+(rows||'<tr><td class="pad empty" colspan="12">No verified structured financial history is available yet.</td></tr>')+'</tbody></table></div>';
+  }else if(tab==="ratios"){
+    const rows=ratios.map(r=>'<tr><td class="pad">'+fmtDate(r.as_of)+'</td><td class="pad">'+esc(r.period_type||"—")+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.gross_margin_pct,2)+'</td><td class="pad num">'+fmtSmart(r.operating_margin_pct,2)+'</td><td class="pad num">'+fmtSmart(r.net_margin_pct,2)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.roe_pct,2)+'</td><td class="pad num">'+fmtSmart(r.roic_pct,2)+'</td><td class="pad num">'+fmtSmart(r.debt_to_equity,2)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.net_debt_to_ebitda,2)+'</td><td class="pad num">'+fmtSmart(r.pe,2)+'</td><td class="pad num">'+fmtSmart(r.pb,2)+'</td><td class="pad num">'+fmtSmart(r.dividend_yield_pct,2)+'</td><td class="pad">'+verificationBadge(r.verification_status||"MISSING")+'</td></tr>').join("");
+    body='<div class="sectionline"><h3 class="block">Returns, leverage and valuation</h3><span>Percent unless shown as a multiple</span></div><div class="scroll"><table><thead><tr><th>As of</th><th>Type</th><th class="num">Gross margin</th><th class="num">Op margin</th><th class="num">Net margin</th><th class="num">ROE</th><th class="num">ROIC</th><th class="num">D/E</th><th class="num">ND/EBITDA</th><th class="num">P/E</th><th class="num">P/B</th><th class="num">Div yield</th><th>Status</th></tr></thead><tbody>'+(rows||'<tr><td class="pad empty" colspan="13">No verified ratio history is available yet.</td></tr>')+'</tbody></table></div>';
+  }else if(tab==="valuation"){
+    const personalPrice=num(c.price), personalBase=num(c.base), personalBear=num(c.bear), personalBull=num(c.bull);
+    const upside=personalPrice&&personalBase!==null?((personalBase-personalPrice)/personalPrice)*100:null;
+    body=(valuation?'<div class="bank-kpis four"><div class="kpi"><div class="k">Bear value</div><div class="v">Rs '+fmtSmart(valuation.bear_fair_value,2)+'</div></div><div class="kpi"><div class="k">Base value</div><div class="v">Rs '+fmtSmart(valuation.base_fair_value,2)+'</div></div><div class="kpi"><div class="k">Bull value</div><div class="v">Rs '+fmtSmart(valuation.bull_fair_value,2)+'</div></div><div class="kpi"><div class="k">Model status</div><div class="v">'+esc(valuation.valuation_status||"—")+'</div></div></div><div class="noticebox"><strong>'+esc(valuation.method||"Valuation")+'</strong><span>'+esc(valuation.valuation_notes||"")+'</span></div>':'<div class="resultempty"><strong>No institutional valuation stored</strong><span>A valuation will appear only after company-specific assumptions and source financials are reviewed.</span></div>')
+      +'<div class="sectionline"><h3 class="block">Personal bear / base / bull overlay</h3><span>Saved to your private research file</span></div><div class="inline"><div class="field"><label>Bear Rs</label><input type="text" data-co-field="bear" value="'+esc(c.bear||"")+'"></div><div class="field"><label>Base Rs</label><input type="text" data-co-field="base" value="'+esc(c.base||"")+'"></div><div class="field"><label>Bull Rs</label><input type="text" data-co-field="bull" value="'+esc(c.bull||"")+'"></div><div class="field"><label>Required return %</label><input type="text" data-co-field="required" value="'+esc(c.required||"")+'"></div></div>'
+      +'<div class="bank-kpis four" style="margin-top:14px"><div class="kpi"><div class="k">Price</div><div class="v">Rs '+fmtSmart(personalPrice,2)+'</div></div><div class="kpi"><div class="k">Upside to base</div><div class="v '+(upside===null?"na":directionClass(upside))+'">'+(upside===null?"—":pct(upside))+'</div></div><div class="kpi"><div class="k">P/E</div><div class="v">'+(master.pe==null?"—":fmtSmart(master.pe,2)+"x")+'</div></div><div class="kpi"><div class="k">P/B</div><div class="v">'+(master.pb==null?"—":fmtSmart(master.pb,2)+"x")+'</div></div></div>';
+  }else if(tab==="news"){
+    const rows=events.map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.event_type||"Event")+'</span><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>').join("");
+    body='<div class="sectionline"><h3 class="block">Company developments</h3><span>Material events only</span></div>'+(rows||'<p class="empty">No company-specific research events have been logged yet.</p>');
+  }else if(tab==="analysis"){
+    body='<div class="factinterpret"><div><span class="analysislabel">REPORTED FACTS</span><strong>Latest available record</strong><p>Price: Rs '+fmtSmart(price,2)+'. Latest financial period: '+esc(latestF.period_end||master.latest_report_period||"not available")+'. Profit after tax: '+pkrBnLabel(latestF.profit_after_tax,2)+'. EPS: '+fmtSmart(latestF.eps,2)+'.</p></div><div><span class="analysislabel">INTERPRETATION</span><p>'+esc(master.investment_thesis||"No analyst thesis has been completed. The portal will not infer a recommendation from price or P/E alone.")+'</p></div></div>'
+      +'<div class="analysisgrid"><div class="analysispanel"><div class="analysislabel">BUSINESS QUALITY</div><p>'+esc(c.quality||"Not assessed yet.")+'</p></div><div class="analysispanel"><div class="analysislabel">RISK</div><p>'+esc(master.key_risk||c.risks||"Not assessed yet.")+'</p></div><div class="analysispanel"><div class="analysislabel">CATALYST</div><p>'+esc(master.next_catalyst||c.catalyst||"Not assessed yet.")+'</p></div></div>';
+  }else{
+    const rows=docs.map(d=>'<tr><td class="pad"><strong>'+esc(d.title||d.document_type||"—")+'</strong></td><td class="pad">'+esc(d.document_type||"—")+'</td><td class="pad">'+fmtDate(d.period_end)+'</td><td class="pad">'+verificationBadge(d.verification_status)+'</td><td class="pad">'+(safeHttpsUrl(d.source_url)?'<a href="'+esc(safeHttpsUrl(d.source_url))+'" target="_blank" rel="noreferrer">Open source</a>':"—")+'</td></tr>').join("");
+    body='<div class="sectionline"><h3 class="block">Source documents</h3><span>'+fmtSmart(docs.length)+' evidence records</span></div><div class="scroll"><table><thead><tr><th>Document</th><th>Type</th><th>Period</th><th>Verification</th><th>Link</th></tr></thead><tbody>'+(rows||'<tr><td class="pad empty" colspan="5">No source documents have been attached yet.</td></tr>')+'</tbody></table></div><div class="noticebox"><strong>Evidence rule</strong><span>Issuer filings and official releases take precedence. Standardized rows remain clearly labelled, and unsupported values stay blank.</span></div>';
+  }
+  return header+body;
+}
 function companyHTML(t){
   const c=state.companies[t]||ensureCompanyDetailFromMaster(t);
   if(!c) return '<h2 class="section">Not found</h2><p class="sub">That company is not in the live company universe. <a href="#" data-nav="companies">Back to the list</a>.</p>';
@@ -658,58 +775,7 @@ function companyHTML(t){
   const masterSector=master ? (master.sector||"—") : (c.sectorName||secName(c.sector));
   const dc=c.dataCoverage||null;
   if(masterSector==="COMMERCIAL BANKS") return bankCompanyHTML(t,c,master||{},dc);
-
-  const rows=(c.fy||[]).map(r=>{
-    const src=safeHttpsUrl(r.source_url)
-      ? '<a href="'+esc(safeHttpsUrl(r.source_url))+'" target="_blank" rel="noreferrer">'+esc(r.source_name||"source")+'</a>'
-      : esc(r.source_name||"—");
-    return '<tr>'
-      +'<td class="pad num">'+esc(r.year||"—")+'</td>'
-      +'<td class="pad num">'+fmtSmart(r.rev,2)+'</td>'
-      +'<td class="pad num">'+fmtSmart(r.pat,2)+'</td>'
-      +'<td class="pad num">'+fmtSmart(r.eps,4)+'</td>'
-      +'<td class="pad num">'+fmtSmart(r.roe,4)+'</td>'
-      +'<td class="pad num">'+fmtSmart(r.dps,4)+'</td>'
-      +'<td class="pad num">'+fmtSmart(r.de,4)+'</td>'
-      +'<td class="pad">'+verificationBadge(r.verification_status||"PROVISIONAL")+'</td>'
-      +'<td class="pad">'+src+(r.source_page?' · p. '+esc(r.source_page):'')+'</td></tr>';
-  }).join("");
-
-  return '<p class="meta"><a href="#" data-nav="companies">Companies</a> / '+esc(masterSector)+'</p>'
-    +'<h2 class="section">'+esc(c.ticker)+' — '+esc(c.name||"")+'</h2>'
-    +'<div class="inline" style="margin:14px 0 18px">'
-      +'<div class="field"><label>Coverage</label><input type="text" value="'+esc(c.coverage||"—")+'" disabled></div>'
-      +'<div class="field"><label>Master sector</label><input type="text" value="'+esc(masterSector)+'" disabled></div>'
-      +'<div class="field"><label>Price Rs</label><input type="text" value="'+fmtSmart(c.price,2)+'" disabled></div>'
-      +'<div class="field"><label>Shares mn</label><input type="text" value="'+fmtSmart(c.shares,4)+'" disabled></div>'
-      +'<div class="field"><label>Data verification</label><div style="padding-top:7px">'+verificationBadge(dc&&dc.verification_status)+'</div></div>'
-    +'</div>'
-    +'<div class="kpis">'
-      +'<div class="kpi"><div class="k">Financial rows</div><div class="v">'+(dc?fmtSmart(dc.financial_rows):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Ratio rows</div><div class="v">'+(dc?fmtSmart(dc.ratio_rows):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Price rows</div><div class="v">'+(dc?fmtSmart(dc.price_rows):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Valuation rows</div><div class="v">'+(dc?fmtSmart(dc.valuation_rows):"—")+'</div></div>'
-    +'</div>'
-    +'<h3 class="block">Financial history</h3>'
-    +'<p class="hint">Live structured financial data. Missing values display as — and are not estimated.</p>'
-    +'<div class="scroll"><table><thead><tr><th class="num">Year</th><th class="num">Revenue</th><th class="num">PAT</th><th class="num">EPS</th><th class="num">ROE %</th><th class="num">Dividends</th><th class="num">Debt/Equity</th><th>Verification</th><th>Source</th></tr></thead><tbody>'
-      +(rows||'<tr><td class="pad empty" colspan="9">No structured financial history available for this company yet.</td></tr>')
-    +'</tbody></table></div>'
-    +'<h3 class="block">Fair value — personal model</h3>'
-    +'<div class="inline" style="margin-bottom:10px">'
-      +'<div class="field"><label>Bear Rs</label><input type="text" data-co-field="bear" value="'+esc(c.bear||"")+'"></div>'
-      +'<div class="field"><label>Base Rs</label><input type="text" data-co-field="base" value="'+esc(c.base||"")+'"></div>'
-      +'<div class="field"><label>Bull Rs</label><input type="text" data-co-field="bull" value="'+esc(c.bull||"")+'"></div>'
-      +'<div class="field"><label>Required return %</label><input type="text" data-co-field="required" value="'+esc(c.required||"")+'"></div>'
-    +'</div>'
-    +'<div class="kpis"><div class="kpi"><div class="k">Upside to base</div><div class="v '+(upside===null?"na":directionClass(upside))+'">'+(upside===null?"—":pct(upside))+'</div></div>'
-      +'<div class="kpi"><div class="k">Margin of safety</div><div class="v '+(mos===null?"na":directionClass(mos))+'">'+(mos===null?"—":pct(mos))+'</div></div>'
-      +'<div class="kpi"><div class="k">Bear downside</div><div class="v '+((price&&bear!==null)?directionClass(((bear-price)/price)*100):"na")+'">'+((price&&bear!==null)?pct(((bear-price)/price)*100):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Bull upside</div><div class="v '+((price&&bull!==null)?directionClass(((bull-price)/price)*100):"na")+'">'+((price&&bull!==null)?pct(((bull-price)/price)*100):"—")+'</div></div></div>'
-    +'<h3 class="block">Judgement — personal overlay</h3>'
-    +['thesis','catalyst','risks','quality'].map(f=>'<div class="field"><label>'
-      +({thesis:"Thesis",catalyst:"Next catalyst",risks:"What kills it",quality:"Business quality and balance sheet"}[f])+'</label>'
-      +'<textarea data-co-field="'+f+'" rows="3">'+esc(c[f]||"")+'</textarea></div>').join("");
+  return genericCompanyHTML(t,c,master||{},dc);
 }
 
 ;
