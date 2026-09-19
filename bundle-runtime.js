@@ -3,6 +3,22 @@
 function bind(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{route.tab=b.dataset.tab; render();});
   document.querySelectorAll("[data-company-tab]").forEach(b=>b.onclick=()=>{route.companyTab=b.dataset.companyTab; render();});
+  document.querySelectorAll("[data-analysis-run]").forEach(b=>b.onclick=async()=>{
+    const mode=b.dataset.analysisRun||"full";
+    route.analysisMode=mode;
+    setStatus("Refreshing analysis…","saving");
+    b.disabled=true;
+    try{
+      await loadMasterData();
+      await loadLiveResearchData();
+      render();
+      setStatus("Analysis refreshed","saved");
+    }catch(e){
+      route.analysisMode=mode;
+      render();
+      setStatus("Analysis refresh failed");
+    }
+  });
   const mark=el=>{el.onfocus=()=>typing=true; el.onblur=()=>typing=false;};
 
   const gs=$("#globalSearch"), gr=$("#globalSearchResults"), gw=$("#globalSearchWrap");
