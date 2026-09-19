@@ -630,3 +630,24 @@ input:focus,select:focus,textarea:focus{
 .sectorscancard dl{display:grid;grid-template-columns:125px 1fr;gap:6px 10px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--rule);font-size:11.5px}.sectorscancard dt{color:var(--ink-3)}.sectorscancard dd{margin:0;color:var(--ink-2)}
 .sectorcovergrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}.sectorcoverage{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;background:var(--surface);border:1px solid var(--rule-strong);border-radius:9px;padding:11px 12px}.sectorcoverage strong{display:block;font-size:12px}.sectorcoverage small{display:block;color:var(--ink-3);font-size:10px;margin-top:2px}.sectorcoverage>span{font-size:12px;font-weight:600;color:var(--ink)}.sectorcoverage progress{grid-column:1 / -1;width:100%;height:6px;accent-color:var(--accent)}
 @media(max-width:850px){.sectorscangrid,.sectorcovergrid{grid-template-columns:1fr}.sectorscancard dl{grid-template-columns:1fr}}
+
+
+/* ===== investing / trading workspace split ===== */
+.workspace-switch{display:flex;gap:3px;background:var(--sunken);border:1px solid var(--rule);border-radius:9px;padding:3px}
+.workspacebtn{font:inherit;border:0;background:transparent;color:var(--ink-3);border-radius:6px;padding:6px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap}
+.workspacebtn:hover{color:var(--ink);background:var(--surface)}
+.workspacebtn[aria-current="true"]{background:var(--surface);color:var(--accent);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.rail-workspace{margin:12px 10px 4px}.rail-workspace .workspacebtn{flex:1}
+.top-workspace{flex:0 0 auto}
+.trading-topnav{min-width:0}
+.tradehero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:18px}
+.tradebadge{border:1px solid var(--rule-strong);background:var(--surface);border-radius:10px;padding:10px 12px;min-width:180px}
+.tradebadge span{display:block;color:var(--ink-3);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em}
+.tradebadge strong{display:block;margin-top:3px;font-size:14px}
+.tradegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:10px 0 18px}
+.tradecard{background:var(--surface);border:1px solid var(--rule-strong);border-radius:10px;padding:13px 14px}
+.tradecard span{display:block;color:var(--ink-3);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em}
+.tradecard strong{display:block;font-size:15px;margin:5px 0 3px}.tradecard p{font-size:11.5px;color:var(--ink-2);margin:0}
+.tradeready{border-left:3px solid var(--accent)}.tradegap{border-left:3px solid var(--warn)}
+@media(max-width:1000px){.top-workspace{order:-1}.tradegrid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.tradegrid{grid-template-columns:1fr}.tradehero{flex-direction:column}.top-workspace{width:100%}.top-workspace .workspacebtn{flex:1}}
