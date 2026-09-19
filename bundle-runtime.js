@@ -11,6 +11,11 @@ function bind(){
     route.tradeRange=b.dataset.tradeRange||"1M";
     render();
   });
+  const tradeTickerSelect=$("#tradeTickerSelect");
+  if(tradeTickerSelect) tradeTickerSelect.onchange=()=>{
+    route.tradeTicker=cleanTicker(tradeTickerSelect.value)||"KSE100";
+    render();
+  };
   const meblModelInputs=document.querySelectorAll("[data-mebl-model]");
   if(meblModelInputs.length){
     meblModelInputs.forEach(el=>{el.oninput=el.onchange=()=>updateMeblValuationInteractive();});

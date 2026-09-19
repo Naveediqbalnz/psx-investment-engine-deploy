@@ -1502,12 +1502,32 @@ function tradingChartModeLabel(mode){
 function tradingViewRange(range){
   return ({"1D":"1D","1W":"5D","1M":"1M","3M":"3M","6M":"6M","YTD":"YTD","1Y":"12M","3Y":"36M","5Y":"60M","All":"ALL"})[range]||"1M";
 }
-function tradingViewChartURL(mode,range){
+function tradingChartInstruments(){
+  const seen=new Set();
+  const companies=(initMasterState().companies||[]).filter(c=>{
+    const ticker=cleanTicker(c.ticker);
+    if(!ticker||seen.has(ticker)) return false;
+    seen.add(ticker);
+    return true;
+  }).sort((a,b)=>cleanTicker(a.ticker).localeCompare(cleanTicker(b.ticker)));
+  return [{ticker:"KSE100",label:"KSE-100",name:"Pakistan Stock Exchange benchmark index",record:null}].concat(companies.map(c=>({
+    ticker:cleanTicker(c.ticker),
+    label:cleanTicker(c.ticker),
+    name:c.company_name||"",
+    record:c
+  })));
+}
+function tradingSelectedInstrument(){
+  const instruments=tradingChartInstruments();
+  const selected=cleanTicker(route.tradeTicker||"KSE100");
+  return instruments.find(x=>x.ticker===selected)||instruments[0];
+}
+function tradingViewChartURL(mode,range,ticker){
   const theme=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
   const candle=mode==="trading"||mode==="volume";
   const studies=(mode==="volume"||mode==="trading")?["Volume@tv-basicstudies"]:[];
   const params=new URLSearchParams({
-    symbol:"PSX:KSE100",
+    symbol:"PSX:"+(cleanTicker(ticker)||"KSE100"),
     interval:range==="1D"?"15":"D",
     range:tradingViewRange(range),
     timezone:"Asia/Karachi",
@@ -1528,18 +1548,28 @@ function tradingViewChartURL(mode,range){
 }
 function tradingChartHTML(){
   const kse=tradingKseSnapshot();
+  const instruments=tradingChartInstruments();
+  const instrument=tradingSelectedInstrument();
+  const isIndex=instrument.ticker==="KSE100";
+  const company=instrument.record||{};
   const modes=[["price","Price"],["volume","Volume"],["returns","Returns"],["relative","Relative Strength"],["trading","Trading Chart"]];
   const ranges=["1D","1W","1M","3M","6M","YTD","1Y","3Y","5Y","All"];
-  const moveClass=kse.pctMove===null||kse.pctMove===0?"neutral":kse.pctMove>0?"up":"down";
-  const moveText=kse.pctMove===null?"—":(kse.pctMove>0?"+":"")+fmt(kse.pctMove,2)+"%";
-  const pointsText=kse.points===null?"—":(kse.points>0?"+":"")+fmt(kse.points,2);
+  const latestValue=isIndex?kse.value:num(company.last_price);
+  const latestDate=isIndex?(kse.eventDate||kse.period):(company.price_date||"");
+  const source=isIndex?kse.source:(company.price_source||company.universe_source||"Pakistan Stock Exchange Data Portal");
+  const pctMove=isIndex?kse.pctMove:null, points=isIndex?kse.points:null;
+  const moveClass=pctMove===null||pctMove===0?"neutral":pctMove>0?"up":"down";
+  const moveText=pctMove===null?"—":(pctMove>0?"+":"")+fmt(pctMove,2)+"%";
+  const pointsText=points===null?"—":(points>0?"+":"")+fmt(points,2)+(isIndex?" pts":"");
   const mode=route.tradeChartMode||"price", range=route.tradeRange||"1M";
-  const chartNote=mode==="returns"?'<div class="chartcontext">Use the chart percentage scale to inspect returns for the selected period.</div>':mode==="relative"?'<div class="chartcontext">Use Compare in the chart toolbar to measure KSE-100 against another index.</div>':"";
-  const chartUrl=tradingViewChartURL(mode,range);
+  const chartNote=mode==="returns"?'<div class="chartcontext">Use the chart percentage scale to inspect returns for the selected period.</div>':mode==="relative"?'<div class="chartcontext">Use Compare in the chart toolbar to measure '+esc(instrument.label)+' against another stock or index.</div>':"";
+  const chartUrl=tradingViewChartURL(mode,range,instrument.ticker);
+  const options=instruments.map(x=>'<option value="'+esc(x.ticker)+'" '+(x.ticker===instrument.ticker?'selected':'')+'>'+esc(x.label+(x.name?' — '+x.name:''))+'</option>').join("");
   return '<section class="marketterminal">'
-    +'<div class="marketterminal-head"><div class="marketidentity"><div class="marketindexrow"><span class="indexbadge">KSE-100</span><span class="officialtag">Official PSX snapshot</span></div>'
-      +'<div class="marketlevel">'+(kse.value===null?"—":fmt(kse.value,2))+'</div>'
-      +'<div class="marketmove '+moveClass+'"><strong>'+moveText+'</strong><span>'+pointsText+' pts</span><small>'+fmtDate(kse.eventDate||kse.period)+'</small></div></div>'
+    +'<div class="chartpickerbar"><label for="tradeTickerSelect"><span>Chart ticker</span><select id="tradeTickerSelect" aria-label="Choose PSX stock or index">'+options+'</select></label><small>'+fmtSmart(instruments.length-1)+' PSX companies available</small></div>'
+    +'<div class="marketterminal-head"><div class="marketidentity"><div class="marketindexrow"><span class="indexbadge">'+esc(instrument.label)+'</span><span class="officialtag">'+(isIndex?'Official PSX snapshot':esc(instrument.name||"PSX company"))+'</span></div>'
+      +'<div class="marketlevel">'+(latestValue===null?"—":fmt(latestValue,2))+'</div>'
+      +'<div class="marketmove '+moveClass+'"><strong>'+moveText+'</strong><span>'+pointsText+'</span><small>'+fmtDate(latestDate)+'</small></div></div>'
       +'<div class="marketterminal-meta"><div><span>Selected view</span><strong>'+esc(tradingChartModeLabel(mode))+'</strong></div>'
       +'<div><span>Range</span><strong>'+esc(range)+'</strong></div>'
       +'<div><span>Historical feed</span><strong class="connectedtext">Connected</strong></div></div></div>'
@@ -1547,9 +1577,9 @@ function tradingChartHTML(){
       +'<div class="chartranges">'+ranges.map(x=>'<button type="button" class="chartrangebtn" data-trade-range="'+x+'" aria-current="'+(range===x)+'">'+x+'</button>').join("")+'</div></div>'
     +chartNote
     +'<div class="chartcanvas chartconnected">'
-      +'<iframe class="tradingviewframe" src="'+esc(chartUrl)+'" title="KSE-100 '+esc(tradingChartModeLabel(mode))+' chart" loading="lazy" allowtransparency="true" scrolling="no"></iframe>'
+      +'<iframe class="tradingviewframe" src="'+esc(chartUrl)+'" title="'+esc(instrument.label)+' '+esc(tradingChartModeLabel(mode))+' chart" loading="lazy" allowtransparency="true" scrolling="no"></iframe>'
     +'</div>'
-    +'<div class="chartfooter"><span>Snapshot source: '+esc(kse.source||"Pakistan Stock Exchange Data Portal")+'</span><span>Interactive history: TradingView · PSX:KSE100</span><span>Chart status: CONNECTED</span></div>'
+    +'<div class="chartfooter"><span>Snapshot source: '+esc(source||"Pakistan Stock Exchange Data Portal")+'</span><span>Interactive history: TradingView · PSX:'+esc(instrument.ticker)+'</span><span>Chart status: CONNECTED</span></div>'
   +'</section>';
 }
 function tradingMarketPanels(){
