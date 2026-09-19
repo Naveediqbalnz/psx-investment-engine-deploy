@@ -729,6 +729,85 @@ function analysisImpactColumn(title,field,events){
     +(rows.length?rows.map(e=>'<div class="impactrow"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong><span>'+esc(e[field])+'</span></div>').join("")
       :'<p class="empty">—</p>')+'</div>';
 }
+
+function fullDailyDeskResultHTML(live,master,events,macro){
+  const companies=(master.companies||[]);
+  const sectors=(master.sectors||[]);
+  const coverage=(live.coverage||[]);
+  const financials=(live.financials||[]);
+  const valuations=(live.valuations||[]);
+  const covered=coverage.filter(x=>Number(x.financial_rows||0)>0);
+  const latestEvents=events.slice(0,6);
+  const highEvents=events.filter(e=>String(e.materiality||"").toLowerCase()==="high");
+  const verifiedSources=(live.sourceDocuments||[]).filter(x=>String(x.verification_status||"").toUpperCase()==="VERIFIED").length;
+
+  const summaryCards=[
+    ["PSX universe",companies.length,"companies"],
+    ["Financial coverage",covered.length,companies.length+" companies in universe"],
+    ["Financial rows",financials.length,"structured records"],
+    ["Research events",events.length,highEvents.length+" high materiality"],
+    ["Verified sources",verifiedSources,"source documents"],
+    ["Valuation records",valuations.length,valuations.length?"stored models":"not populated yet"]
+  ].map(x=>'<div class="deskstat"><span>'+esc(x[0])+'</span><strong>'+fmtSmart(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join("");
+
+  const macroRows=macro.map(m=>
+    '<div class="deskmetric"><span>'+esc(m.indicator||"—")+'</span><strong>'+fmtSmart(m.latest_value)+'</strong>'
+      +'<small>'+esc([m.unit,m.period].filter(Boolean).join(" · ")||"—")+'</small></div>'
+  ).join("");
+
+  const eventRows=latestEvents.map(e=>
+    '<div class="deskfinding"><div class="deskfindingtop"><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span>'
+      +'<small>'+fmtDate(e.event_date)+' · '+esc(e.ticker_sector||e.entity_type||"Market")+'</small></div>'
+      +'<strong>'+esc(e.headline||"—")+'</strong>'
+      +'<p>'+esc(e.fact_summary||"—")+'</p>'
+      +'<div class="deskimpact"><b>What changed</b><span>'+esc(e.what_changed||"—")+'</span></div>'
+      +'<div class="deskimpact"><b>Valuation / risk</b><span>'+esc(e.valuation_impact||e.risk_impact||"—")+'</span></div>'
+      +(e.required_action?'<div class="deskaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")
+    +'</div>'
+  ).join("");
+
+  const coveredTickers=covered.slice(0,20).map(x=>cleanTicker(x.ticker)).filter(Boolean);
+  const companyRows=coveredTickers.map(t=>{
+    const c=companies.find(x=>cleanTicker(x.ticker)===t)||{};
+    const dc=coverage.find(x=>cleanTicker(x.ticker)===t)||{};
+    return '<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(t)+'"><strong>'+esc(t)+'</strong></a></td>'
+      +'<td class="pad">'+esc(c.company_name||"—")+'</td>'
+      +'<td class="pad">'+esc(c.sector||"—")+'</td>'
+      +'<td class="pad num">'+fmtSmart(c.last_price,2)+'</td>'
+      +'<td class="pad num">'+fmtSmart(dc.financial_rows)+'</td>'
+      +'<td class="pad">'+fmtDate(c.latest_report_period)+'</td>'
+      +'<td class="pad">'+verificationBadge(c.profile_verification_status||dc.verification_status||"MISSING")+'</td></tr>';
+  }).join("");
+
+  const actions=events.filter(e=>String(e.required_action||"").trim()).slice(0,8);
+  const actionRows=actions.map(e=>
+    '<div class="queue warn"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong>'
+      +'<span class="why">'+esc(e.required_action)+'</span><span class="act">'+fmtDate(e.event_date)+'</span></div>'
+  ).join("");
+
+  const coverageMessage=valuations.length
+    ? 'Stored valuation records are available for this run.'
+    : 'No verified valuation records are stored yet. The desk can show prices and available multiples, but it should not produce intrinsic-value conclusions until the valuation engine has verified inputs.';
+
+  return '<section class="analysisresult">'
+    +'<div class="resulthead"><div><span class="analysislabel">RUN RESULT</span><h3>Full Daily Desk</h3>'
+      +'<p>Database-driven PSX research snapshot generated from the latest records available to the portal.</p></div>'
+      +'<div class="runstamp"><span>Completed</span><strong>'+fmtDate(route.analysisRanAt||todayISO())+'</strong></div></div>'
+    +'<div class="deskstats">'+summaryCards+'</div>'
+    +'<div class="sectionline"><h3 class="block">Market & macro</h3><span>'+fmtSmart(macro.length)+' indicators loaded</span></div>'
+    +'<div class="deskmetrics">'+(macroRows||'<div class="resultempty">No verified macro data available.</div>')+'</div>'
+    +'<div class="sectionline"><h3 class="block">What changed</h3><span>Latest material research events</span></div>'
+    +(eventRows?'<div class="deskfindings">'+eventRows+'</div>':'<div class="resultempty">No research events available for this run.</div>')
+    +'<div class="sectionline"><h3 class="block">Companies with financial coverage</h3><span>'+fmtSmart(covered.length)+' of '+fmtSmart(companies.length)+'</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th class="num">Price</th><th class="num">Financial rows</th><th>Latest report</th><th>Status</th></tr></thead><tbody>'
+      +(companyRows||'<tr><td class="pad empty" colspan="7">No company financial coverage available.</td></tr>')+'</tbody></table></div>'
+    +'<div class="sectionline"><h3 class="block">Valuation readiness</h3><span>Evidence check</span></div>'
+    +'<div class="resultnotice '+(valuations.length?"ready":"limited")+'"><strong>'+(valuations.length?"Valuation data available":"Valuation layer not ready")+'</strong><span>'+esc(coverageMessage)+'</span></div>'
+    +'<div class="sectionline"><h3 class="block">What to investigate next</h3><span>Research queue generated from events</span></div>'
+    +(actionRows||'<div class="resultempty">No outstanding research actions recorded.</div>')
+    +'</section>';
+}
+
 function analysisHTML(){
   const live=initLiveState();
   const master=initMasterState();
@@ -851,15 +930,24 @@ function analysisHTML(){
   else if(mode==="risk") body=riskDesk+fullFacts+actionDesk;
   else body=fullMacro+fullFacts+transmission+sectorDesk+companyDesk+valuationDesk+riskDesk+actionDesk;
 
+  const runState = route.analysisRunning
+    ? '<div class="resultempty loading"><strong>Running '+esc(modeLabels[mode]||modeLabels.full)+'…</strong><span>Refreshing the latest database records.</span></div>'
+    : route.analysisError
+      ? '<div class="resultempty error"><strong>Run failed</strong><span>'+esc(route.analysisError)+'</span></div>'
+      : !route.analysisRan
+        ? '<div class="resultempty prompt"><strong>Choose an analysis above and press Run.</strong><span>The result will appear here after the latest database records are refreshed.</span></div>'
+        : mode==="full"
+          ? fullDailyDeskResultHTML(live,master,events,macro)
+          : body;
+
   return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
     +'<p class="sub">Run a focused PSX analysis against the latest research database. Facts and interpretation stay separate.</p></div>'
-    +'<div class="analysisrunmeta"><span>Current run</span><strong>'+esc(modeLabels[mode]||modeLabels.full)+'</strong><small>'+fmtDate(todayISO())+'</small></div></div>'
+    +'<div class="analysisrunmeta"><span>Current run</span><strong>'+esc(modeLabels[mode]||modeLabels.full)+'</strong><small>'+(route.analysisRanAt?fmtDate(route.analysisRanAt):"Not run")+'</small></div></div>'
     +'<div class="analysislauncher">'+launchers+'</div>'
-    +body;
+    +runState;
 }
 
 ;
-
 /* ===== assets/views-master.js ===== */
 function masterDataHTML(){
   const m=initMasterState();
