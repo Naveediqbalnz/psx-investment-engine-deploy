@@ -15,21 +15,57 @@ function dashHTML(){
   const m=state.macro;
   const master=initMasterState();
   const live=initLiveState();
+  const events=(live.events||[]).slice().sort((a,b)=>
+    String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
+  );
+  const highEvents=events.filter(e=>String(e.materiality||"").toLowerCase()==="high");
+  const coverage=live.coverage||[];
+  const coveredCompanies=coverage.filter(x=>Number(x.financial_rows||0)>0).length;
+  const missingCoverage=Math.max(0,(master.companies||[]).length-coveredCompanies);
   const verifiedDocs=(live.sourceDocuments||[]).filter(x=>x.verification_status==="VERIFIED").length;
+  const latestEvent=events[0]||null;
+
+  const macroStrip=[["kse","KSE-100"],["rate","Policy rate"],["cpi","CPI YoY"],["pkr","PKR/USD"],["tbill","12M T-bill"]]
+    .map(f=>'<div class="marketmetric"><span>'+esc(f[1])+'</span><strong>'+fmtSmart(m[f[0]])+'</strong></div>').join("");
+
+  const decisionCards=[
+    ["Latest event",latestEvent?latestEvent.headline:"—",latestEvent?(latestEvent.event_date||"—"):"No event data","news"],
+    ["High materiality",fmtSmart(highEvents.length),"Research events","news"],
+    ["Companies covered",fmtSmart(coveredCompanies),fmtSmart((master.companies||[]).length)+" in universe","companies"],
+    ["Coverage gaps",fmtSmart(missingCoverage),"Companies without financial history","companies"]
+  ].map(x=>'<button class="decisioncard" data-nav="'+x[3]+'"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></button>').join("");
+
+  const eventCards=events.slice(0,5).map(e=>
+    '<button class="dailyitem" data-nav="news"><div><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span>'
+      +'<small>'+esc(e.event_date||"—")+' · '+esc(e.ticker_sector||e.entity_type||"Market")+'</small></div>'
+      +'<strong>'+esc(e.headline||"—")+'</strong><p>'+esc(e.fact_summary||e.what_changed||"—")+'</p>'
+      +(e.required_action?'<em>'+esc(e.required_action)+'</em>':"")+'</button>'
+  ).join("");
+
+  const radar=(master.companies||[]).slice().sort((a,b)=>{
+    const ad=String(a.last_research_update||a.updated_at||"");
+    const bd=String(b.last_research_update||b.updated_at||"");
+    return bd.localeCompare(ad);
+  }).slice(0,12).map(c=>
+    '<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td>'
+      +'<td class="pad">'+esc(c.company_name||"—")+'</td><td class="pad">'+esc(c.sector||"—")+'</td>'
+      +'<td class="pad num">'+fmtSmart(c.last_price,2)+'</td><td class="pad num">'+(c.pe==null?"—":fmtSmart(c.pe,2)+"x")+'</td>'
+      +'<td class="pad">'+esc(c.latest_report_period||"—")+'</td><td class="pad">'+verificationBadge(c.profile_verification_status||"MISSING")+'</td></tr>'
+  ).join("");
+
   const factPills=[
-    ["Universe",master.companies.length||"—"],
-    ["Sectors",master.sectors.length||"—"],
+    ["Universe",(master.companies||[]).length||"—"],
+    ["Sectors",(master.sectors||[]).length||"—"],
     ["Financial rows",(live.financials||[]).length||"—"],
     ["Verified sources",verifiedDocs||"—"]
   ].map(x=>'<span class="factpill"><b>'+fmtSmart(x[1])+'</b>'+esc(x[0])+'</span>').join("");
-  const kpis = [["kse","KSE-100"],["rate","Policy rate %"],["cpi","CPI YoY %"],["pkr","PKR/USD"]]
-    .map(f=>'<div class="kpi"><div class="k">'+esc(f[1])+'</div><div class="v'+(m[f[0]]?"":" na")+'">'
-      +fmtSmart(m[f[0]])+'</div></div>').join("");
+
   const strip = SECTORS.map(s=>{
     const d=daysSince(state.sectors[s.id].updatedAt);
     return '<button data-nav="sector" data-id="'+s.id+'" class="'+ageClass(d)+'"><span class="nm">'+esc(s.short)+'</span>'
       +'<span class="days">'+(d===null?"—":d)+'<span class="unit">'+(d===null?"not reviewed":"days old")+'</span></span></button>';
   }).join("");
+
   const rank = SECTORS.map(s=>{
     const st=state.sectors[s.id], d=daysSince(st.updatedAt);
     const mark = st.rating==="Overweight"?"▲":st.rating==="Underweight"?"▼":st.rating==="Neutral"?"■":"";
@@ -38,25 +74,25 @@ function dashHTML(){
       +"<td class='pad num'>"+esc(st.conviction||"—")+"</td><td class='pad num'>"+(st.valPct?esc(st.valPct)+"%":"—")+"</td>"
       +"<td class='pad'>"+esc(st.cycle||"—")+"</td><td class='pad num'>"+(d===null?"—":d+"d")+"</td></tr>";
   }).join("");
-  const p = positionRows();
-  const hasPrivatePortfolio=Boolean(session);
+
   const q = researchQueue().slice(0,5);
-  return '<div class="pagehero"><div><div class="eyebrow">PSX INVESTMENT ENGINE</div><h2 class="section">Pakistan equity dashboard</h2>'
-    +'<p class="sub">A single research desk for macro, sectors, companies, valuation and evidence. Missing or unverified values remain — rather than being filled with estimates.</p></div>'
+
+  return '<div class="pagehero"><div><div class="eyebrow">DAILY PSX DECISION COCKPIT</div><h2 class="section">What changed, what matters, where to look</h2>'
+    +'<p class="sub">Daily research should move from facts to affected companies, valuation and risk. Nothing here invents missing market data.</p></div>'
     +'<div class="factbar">'+factPills+'</div></div>'
-    +'<div class="kpis">'+kpis+'</div>'
+    +'<div class="marketstrip">'+macroStrip+'</div>'
+    +'<div class="decisiongrid">'+decisionCards+'</div>'
+    +'<div class="sectionline"><h3 class="block">Latest material developments</h3><span><button class="textbtn" data-nav="news">Open full news feed</button></span></div>'
+    +(eventCards?'<div class="dailyfeed">'+eventCards+'</div>':'<p class="empty">No research events available.</p>')
+    +'<div class="sectionline"><h3 class="block">Company radar</h3><span>Recently updated research records</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th class="num">Price</th><th class="num">P/E</th><th>Latest report</th><th>Profile</th></tr></thead><tbody>'+radar+'</tbody></table></div>'
     +'<div class="sectionline"><h3 class="block">Sector freshness</h3><span>Research maintenance</span></div><div class="strip">'+strip+'</div>'
     +'<p class="legend">Green: reviewed within 35 days. Amber: 36–75 days. Strong amber: more than 75 days.</p>'
     +'<div class="sectionline"><h3 class="block">Cross-sector view</h3><span>Current research file</span></div>'
     +'<div class="scroll"><table><thead><tr><th>Sector</th><th>Rating</th><th class="num">Conviction</th><th class="num">Val %ile</th><th>Earnings regime</th><th class="num">Updated</th></tr></thead><tbody>'+rank+'</tbody></table></div>'
-    +'<div class="sectionline"><h3 class="block">Portfolio</h3><span>'+(hasPrivatePortfolio?"Private account":"Available after sign-in")+'</span></div>'
-    +'<div class="kpis"><div class="kpi"><div class="k">Positions</div><div class="v">'+(hasPrivatePortfolio?p.rows.length:"—")+'</div></div>'
-    +'<div class="kpi"><div class="k">Invested Rs</div><div class="v">'+(hasPrivatePortfolio?fmt(p.invested,0):"—")+'</div></div>'
-    +'<div class="kpi"><div class="k">Cash Rs</div><div class="v">'+(hasPrivatePortfolio?fmt(p.cash,0):"—")+'</div></div>'
-    +'<div class="kpi"><div class="k">Total Rs</div><div class="v">'+(hasPrivatePortfolio?fmt(p.total,0):"—")+'</div></div></div>'
-    +'<div class="sectionline"><h3 class="block">What needs attention</h3><span>Highest-priority maintenance</span></div>'
-    +(q.length? q.map(x=>'<div class="queue '+x.sev+'"><strong>'+esc(x.what)+'</strong><span class="why">'+esc(x.why)+'</span><span class="act">'+esc(x.act)+'</span></div>').join("")
-      : '<p class="empty">Nothing overdue.</p>');
+    +'<div class="sectionline"><h3 class="block">What needs attention</h3><span>Research actions</span></div>'
+    +(q.length?q.map(x=>'<div class="queue '+x.sev+'"><strong>'+esc(x.what)+'</strong><span class="why">'+esc(x.why)+'</span><span class="act">'+esc(x.act)+'</span></div>').join("")
+      :'<p class="empty">Nothing overdue.</p>');
 }
 function macroHTML(){
   const m=state.macro;
