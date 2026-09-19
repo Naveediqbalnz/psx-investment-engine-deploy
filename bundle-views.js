@@ -29,7 +29,7 @@ function dashHTML(){
     .map(f=>'<div class="marketmetric"><span>'+esc(f[1])+'</span><strong>'+fmtSmart(m[f[0]])+'</strong></div>').join("");
 
   const decisionCards=[
-    ["Latest event",latestEvent?latestEvent.headline:"—",latestEvent?(latestEvent.event_date||"—"):"No event data","news"],
+    ["Latest event",latestEvent?latestEvent.headline:"—",latestEvent?fmtDate(latestEvent.event_date):"No event data","news"],
     ["High materiality",fmtSmart(highEvents.length),"Research events","news"],
     ["Companies covered",fmtSmart(coveredCompanies),fmtSmart((master.companies||[]).length)+" in universe","companies"],
     ["Coverage gaps",fmtSmart(missingCoverage),"Companies without financial history","companies"]
@@ -37,7 +37,7 @@ function dashHTML(){
 
   const eventCards=events.slice(0,5).map(e=>
     '<button class="dailyitem" data-nav="news"><div><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span>'
-      +'<small>'+esc(e.event_date||"—")+' · '+esc(e.ticker_sector||e.entity_type||"Market")+'</small></div>'
+      +'<small>'+fmtDate(e.event_date)+' · '+esc(e.ticker_sector||e.entity_type||"Market")+'</small></div>'
       +'<strong>'+esc(e.headline||"—")+'</strong><p>'+esc(e.fact_summary||e.what_changed||"—")+'</p>'
       +(e.required_action?'<em>'+esc(e.required_action)+'</em>':"")+'</button>'
   ).join("");
@@ -50,7 +50,7 @@ function dashHTML(){
     '<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td>'
       +'<td class="pad">'+esc(c.company_name||"—")+'</td><td class="pad">'+esc(c.sector||"—")+'</td>'
       +'<td class="pad num">'+fmtSmart(c.last_price,2)+'</td><td class="pad num">'+(c.pe==null?"—":fmtSmart(c.pe,2)+"x")+'</td>'
-      +'<td class="pad">'+esc(c.latest_report_period||"—")+'</td><td class="pad">'+verificationBadge(c.profile_verification_status||"MISSING")+'</td></tr>'
+      +'<td class="pad">'+fmtDate(c.latest_report_period)+'</td><td class="pad">'+verificationBadge(c.profile_verification_status||"MISSING")+'</td></tr>'
   ).join("");
 
   const factPills=[
@@ -296,13 +296,13 @@ function bankCompanyHTML(t,c,master,dc){
     +verificationBadge((master&&master.profile_verification_status)||(dc&&dc.verification_status))+'</div>'
     +'<p class="sub">Sector-aware bank research page. Verified facts and model gaps are kept separate.</p>'
     +'<div class="tagrow"><span>'+esc(master.coverage_tier||"—")+'</span><span>Commercial Banks</span><span>FY end '+esc(master.fy_end||"—")+'</span></div></div>'
-    +'<div class="companyquote"><span>Price</span><strong>Rs '+fmt(price,2)+'</strong><small>'+esc(master.price_date||"—")+'</small></div></div>'
+    +'<div class="companyquote"><span>Price</span><strong>Rs '+fmt(price,2)+'</strong><small>'+fmtDate(master.price_date)+'</small></div></div>'
     +'<div class="bank-kpis">'
       +'<div class="kpi"><div class="k">Market cap</div><div class="v">Rs '+(marketCapM===null?"—":fmt(marketCapM/1000,1))+'bn</div></div>'
       +'<div class="kpi"><div class="k">P/E</div><div class="v">'+(pe===null?"—":fmt(pe,2)+"x")+'</div></div>'
       +'<div class="kpi"><div class="k">Free float</div><div class="v">'+(freeFloat===null?"—":fmt(freeFloat,2)+"%")+'</div></div>'
       +'<div class="kpi"><div class="k">Shares</div><div class="v">'+(sharesM===null?"—":fmt(sharesM,1)+"m")+'</div></div>'
-      +'<div class="kpi"><div class="k">Latest report</div><div class="v smallv">'+esc(master.latest_report_period||"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Latest report</div><div class="v smallv">'+fmtDate(master.latest_report_period)+'</div></div>'
     +'</div><div class="companytabs">'+tabs+'</div>';
 
   let body="";
@@ -334,7 +334,7 @@ function bankCompanyHTML(t,c,master,dc){
       '<tr><td class="pad">'+esc(r.fiscal_year)+'</td><td class="pad num">'+pkrBn(r.profit_after_tax,2)+'</td><td class="pad num">'+fmtSmart(r.eps,2)+'</td><td class="pad">'+verificationBadge(r.verification_status)+'</td><td class="pad"><a href="'+esc(safeHttpsUrl(r.source_url))+'" target="_blank" rel="noreferrer">PSX</a></td></tr>'
     ).join("");
     const qs=fs.filter(r=>String(r.period_type||"").startsWith("Q")).map(r=>
-      '<tr><td class="pad">'+esc(r.period_type+" "+r.fiscal_year)+'</td><td class="pad">'+esc(r.period_end||"—")+'</td><td class="pad num">'+pkrBn(r.profit_after_tax,2)+'</td><td class="pad num">'+fmtSmart(r.eps,2)+'</td><td class="pad">'+verificationBadge(r.verification_status)+'</td></tr>'
+      '<tr><td class="pad">'+esc(r.period_type+" "+r.fiscal_year)+'</td><td class="pad">'+fmtDate(r.period_end)+'</td><td class="pad num">'+pkrBn(r.profit_after_tax,2)+'</td><td class="pad num">'+fmtSmart(r.eps,2)+'</td><td class="pad">'+verificationBadge(r.verification_status)+'</td></tr>'
     ).join("");
     body='<div class="sectionline"><h3 class="block">Annual earnings</h3><span>PKR billions except EPS</span></div>'
       +'<div class="scroll"><table><thead><tr><th>FY</th><th class="num">PAT Rs bn</th><th class="num">EPS Rs</th><th>Verification</th><th>Source</th></tr></thead><tbody>'+ann+'</tbody></table></div>'
@@ -384,7 +384,7 @@ function bankCompanyHTML(t,c,master,dc){
         +'<div class="kpi"><div class="k">Payout input</div><div class="v na">—</div></div>'
       +'</div>';
   } else if(tab==="news"){
-    const own=companyEvents.map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+esc(e.event_date||"—")+'</span><span>'+esc(e.event_type||"Event")+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>').join("");
+    const own=companyEvents.map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.event_type||"Event")+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>').join("");
     const relevant=macroEvents.slice(0,5).map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+esc(e.event_date||"—")+'</span><span>Bank macro</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>').join("");
     body='<div class="sectionline"><h3 class="block">MEBL-specific events</h3><span>Company feed</span></div>'+(own||'<p class="empty">No MEBL-specific research events have been ingested yet.</p>')
       +'<div class="sectionline"><h3 class="block">Bank-relevant macro</h3><span>Rates and inflation</span></div>'+(relevant||'<p class="empty">No bank-relevant macro events available.</p>');
@@ -407,7 +407,7 @@ function bankCompanyHTML(t,c,master,dc){
       +'<div class="queue warn"><strong>MEBL</strong><span class="why">Populate ROE, BVPS, P/B, DPS/payout, NIM, CASA, CAR and asset-quality metrics.</span><span class="act">Ratios</span></div>'
       +'<div class="queue warn"><strong>MEBL</strong><span class="why">Only then run residual-income / ROE-vs-COE and dividend valuation ranges.</span><span class="act">Valuation</span></div>';
   } else {
-    const srcRows=docs.map(d=>'<tr><td class="pad"><strong>'+esc(d.title||d.document_type||"—")+'</strong></td><td class="pad">'+esc(d.document_type||"—")+'</td><td class="pad">'+esc(d.period_end||"—")+'</td><td class="pad">'+verificationBadge(d.verification_status)+'</td><td class="pad">'+(safeHttpsUrl(d.source_url)?'<a href="'+esc(safeHttpsUrl(d.source_url))+'" target="_blank" rel="noreferrer">Open source</a>':"—")+'</td></tr>').join("");
+    const srcRows=docs.map(d=>'<tr><td class="pad"><strong>'+esc(d.title||d.document_type||"—")+'</strong></td><td class="pad">'+esc(d.document_type||"—")+'</td><td class="pad">'+fmtDate(d.period_end)+'</td><td class="pad">'+verificationBadge(d.verification_status)+'</td><td class="pad">'+(safeHttpsUrl(d.source_url)?'<a href="'+esc(safeHttpsUrl(d.source_url))+'" target="_blank" rel="noreferrer">Open source</a>':"—")+'</td></tr>').join("");
     body='<div class="sectionline"><h3 class="block">Source documents</h3><span>Evidence lineage</span></div>'
       +'<div class="scroll"><table><thead><tr><th>Document</th><th>Type</th><th>Period</th><th>Verification</th><th>Link</th></tr></thead><tbody>'+(srcRows||'<tr><td class="pad empty" colspan="5">No source documents found.</td></tr>')+'</tbody></table></div>'
       +'<div class="noticebox"><strong>Verification hierarchy</strong><span>Issuer reports will take precedence for detailed bank ratios and balance-sheet analysis. The current earnings history is from the official PSX standardized company financials table.</span></div>';
@@ -582,7 +582,7 @@ function queueHTML(){
 function logHTML(){
   const secOpts='<option value="Macro">Macro</option>'+SECTORS.map(s=>'<option value="'+esc(s.name)+'">'+esc(s.name)+'</option>').join("");
   const entries=state.log.length? state.log.map(e=>'<div class="logentry"><h4>'+esc(e.sector||"")+'</h4>'
-    +'<div class="lmeta">'+esc(e.date||"")+' · conviction '+esc(e.confidence||"—")+'</div>'
+    +'<div class="lmeta">'+fmtDate(e.date)+' · conviction '+esc(e.confidence||"—")+'</div>'
     +'<p><span class="lbl">Belief</span>'+esc(e.belief||"")+'</p>'
     +(e.why?'<p><span class="lbl">Because</span>'+esc(e.why)+'</p>':"")
     +(e.falsifier?'<p><span class="lbl">Wrong if</span>'+esc(e.falsifier)+'</p>':"")
@@ -678,6 +678,93 @@ function methodHTML(){
     +'<li>Confirmation drift — the bear case is filled even when you are bullish.</li>'
     +'<li>Unfalsifiable memory — every log entry names what would prove it wrong.</li>'
     +'<li>Silent risk — a position without a stop, target and review date is flagged until it has all three.</li></ul>';
+}
+
+
+function newsMaterialityClass(v){
+  const x=String(v||"").toLowerCase();
+  return x==="high"?"high":x==="medium"?"medium":"low";
+}
+function sourceTextForEvent(e){
+  const source=String(e.source||"").trim();
+  const sourceType=String(e.source_type||"").trim();
+  return [source,sourceType].filter(Boolean).join(" · ")||"—";
+}
+function newsHTML(){
+  const events=(initLiveState().events||[]).slice().sort((a,b)=>
+    String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
+  );
+  const official=events.filter(e=>String(e.source_type||"").toLowerCase()==="official").length;
+  const high=events.filter(e=>String(e.materiality||"").toLowerCase()==="high").length;
+  const cards=events.map(e=>{
+    const mat=String(e.materiality||"").toUpperCase()||"—";
+    return '<article class="newsitem">'
+      +'<div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.event_type||e.entity_type||"Event")+'</span>'
+      +'<span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(mat)+'</span></div>'
+      +'<h3>'+esc(e.headline||"—")+'</h3>'
+      +'<p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p>'
+      +'<div class="newssource">'+esc(sourceTextForEvent(e))+'</div>'
+      +(e.required_action?'<div class="newsaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")
+      +'</article>';
+  }).join("");
+  return '<div class="pagehero compact"><div><div class="eyebrow">MARKET INTELLIGENCE</div><h2 class="section">News</h2>'
+    +'<p class="sub">Chronological PSX, macro, sector and company developments already captured by the research engine. Facts are shown before interpretation.</p></div>'
+    +'<div class="factbar"><span class="factpill"><b>'+fmtSmart(events.length)+'</b>Events</span>'
+    +'<span class="factpill"><b>'+fmtSmart(official)+'</b>Official-source</span>'
+    +'<span class="factpill"><b>'+fmtSmart(high)+'</b>High materiality</span></div></div>'
+    +(cards||'<p class="empty">No research events have been ingested yet.</p>');
+}
+
+function analysisImpactColumn(title,field,events){
+  const rows=events.filter(e=>String(e[field]||"").trim()).slice(0,5);
+  return '<div class="analysispanel"><div class="analysislabel">'+esc(title)+'</div>'
+    +(rows.length?rows.map(e=>'<div class="impactrow"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong><span>'+esc(e[field])+'</span></div>').join("")
+      :'<p class="empty">—</p>')+'</div>';
+}
+function analysisHTML(){
+  const live=initLiveState();
+  const events=(live.events||[]).slice().sort((a,b)=>
+    String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
+  );
+  const macro=(live.macro||[]).slice();
+  const sectors=(initMasterState().sectors||[]).slice();
+  const latestFacts=events.slice(0,5);
+  const actions=events.filter(e=>String(e.required_action||"").trim()).slice(0,6);
+  const macroCards=macro.slice(0,8).map(m=>
+    '<div class="analysisstat"><span>'+esc(m.indicator||"—")+'</span><strong>'+fmtSmart(m.latest_value)+'</strong>'
+      +'<small>'+esc([m.unit,m.period].filter(Boolean).join(" · ")||"")+'</small></div>'
+  ).join("");
+  const factRows=latestFacts.map(e=>
+    '<div class="factinterpret"><div><span class="analysislabel">FACT</span><strong>'+esc(e.headline||"—")+'</strong><p>'+esc(e.fact_summary||"—")+'</p>'
+      +'<small>'+esc(sourceTextForEvent(e))+'</small></div>'
+      +'<div><span class="analysislabel">INTERPRETATION</span><p>'+esc(e.what_changed||e.analyst_note||"—")+'</p></div></div>'
+  ).join("");
+  const sectorRows=sectors.filter(s=>s.sector_view||s.earnings_direction||s.risks||s.catalysts).slice(0,12).map(s=>
+    '<tr><td class="pad"><strong>'+esc(s.sector||"—")+'</strong></td>'
+      +'<td class="pad">'+esc(s.regime||"—")+'</td>'
+      +'<td class="pad">'+esc(s.earnings_direction||"—")+'</td>'
+      +'<td class="pad">'+esc(s.sector_view||"—")+'</td>'
+      +'<td class="pad">'+esc(s.catalysts||"—")+'</td>'
+      +'<td class="pad">'+esc(s.risks||"—")+'</td></tr>'
+  ).join("");
+  return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
+    +'<p class="sub">The same decision structure used in the scheduled PSX desk: verified facts first, then interpretation, earnings/valuation/risk impact, and what needs to be checked next.</p></div></div>'
+    +'<div class="sectionline"><h3 class="block">Market & macro snapshot</h3><span>Verified database inputs</span></div>'
+    +'<div class="analysisstats">'+(macroCards||'<p class="empty">No macro data available.</p>')+'</div>'
+    +'<div class="sectionline"><h3 class="block">Facts vs interpretation</h3><span>Latest material developments</span></div>'
+    +(factRows||'<p class="empty">No research events available.</p>')
+    +'<div class="sectionline"><h3 class="block">Investment transmission</h3><span>How new facts reach the model</span></div>'
+    +'<div class="analysisgrid">'
+      +analysisImpactColumn("Earnings impact","earnings_impact",events)
+      +analysisImpactColumn("Valuation impact","valuation_impact",events)
+      +analysisImpactColumn("Risk impact","risk_impact",events)
+    +'</div>'
+    +'<div class="sectionline"><h3 class="block">Sector desk</h3><span>Current research framework</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Sector</th><th>Regime</th><th>Earnings</th><th>Current view</th><th>Catalysts</th><th>Risks</th></tr></thead><tbody>'
+      +(sectorRows||'<tr><td class="pad empty" colspan="6">Sector analysis has not been populated yet.</td></tr>')+'</tbody></table></div>'
+    +'<div class="sectionline"><h3 class="block">What to do next</h3><span>Research actions, not trading instructions</span></div>'
+    +(actions.length?actions.map(e=>'<div class="queue warn"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong><span class="why">'+esc(e.required_action)+'</span><span class="act">'+fmtDate(e.event_date)+'</span></div>').join("")
+      :'<p class="empty">No outstanding research actions recorded.</p>');
 }
 
 ;
