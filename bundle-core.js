@@ -158,7 +158,7 @@ function legacySectorIdForName(name){
 }
 async function loadMasterData(){
   const master=initMasterState();
-  if(!sb||!session) return master;
+  if(!sb) return master;
   master.error=null;
 
   const [sectors,companies,sources]=await Promise.all([
