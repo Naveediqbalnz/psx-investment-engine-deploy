@@ -351,3 +351,131 @@ tbody tr:hover td{background:color-mix(in srgb,var(--accent-soft) 48%,transparen
 .riskcard strong{display:block;font-family:var(--serif);font-size:16px;font-weight:500;margin:7px 0 4px}.riskcard p{font-size:11.5px;color:var(--ink-2);margin:0}.riskcard em{display:block;font-style:normal;color:var(--accent);font-size:10.5px;margin-top:8px;padding-top:7px;border-top:1px solid var(--rule)}
 @media(max-width:900px){.analysislauncher{grid-template-columns:repeat(2,1fr)}.riskgrid{grid-template-columns:1fr}}
 @media(max-width:600px){.analysislauncher{grid-template-columns:1fr}.analysisrunmeta{width:100%}}
+
+
+/* ===== readability theme v1 ===== */
+:root{
+  --bg:#F6F8F9;
+  --surface:#FFFFFF;
+  --sunken:#EEF2F3;
+  --ink:#172126;
+  --ink-2:#3E4C53;
+  --ink-3:#68777E;
+  --rule:#D9E0E3;
+  --rule-strong:#BAC5CA;
+  --accent:#087A6B;
+  --accent-soft:#E8F3F1;
+  --warn:#9A6400;
+  --warn-soft:#FFF4DD;
+  --alert:#B13A2E;
+  --alert-soft:#FCEAE7;
+  --sans:"IBM Plex Sans",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --serif:var(--sans);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11171A;
+    --surface:#182125;
+    --sunken:#202B30;
+    --ink:#F0F4F5;
+    --ink-2:#C3CDD1;
+    --ink-3:#8FA0A7;
+    --rule:#2D3A40;
+    --rule-strong:#435158;
+    --accent:#69C9B7;
+    --accent-soft:#183B35;
+    --warn:#E4AD4F;
+    --warn-soft:#3A2D17;
+    --alert:#EE9388;
+    --alert-soft:#43231F;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11171A;
+  --surface:#182125;
+  --sunken:#202B30;
+  --ink:#F0F4F5;
+  --ink-2:#C3CDD1;
+  --ink-3:#8FA0A7;
+  --rule:#2D3A40;
+  --rule-strong:#435158;
+  --accent:#69C9B7;
+  --accent-soft:#183B35;
+  --warn:#E4AD4F;
+  --warn-soft:#3A2D17;
+  --alert:#EE9388;
+  --alert-soft:#43231F;
+}
+body{
+  font-size:15.5px;
+  line-height:1.55;
+  letter-spacing:0;
+}
+.brand h1,
+h2.section,
+.prose,
+textarea,
+.kpi .v,
+.factpill b,
+.analysisstat strong,
+.companyquote strong,
+.decisioncard strong,
+.dailyitem strong,
+.factinterpret strong,
+.valuationhero h3,
+.riskcard strong{
+  font-family:var(--sans);
+}
+.brand h1{font-weight:600;font-size:18px}
+h2.section{font-weight:600;font-size:28px;line-height:1.2;letter-spacing:-.02em;color:var(--ink)}
+.sub{font-size:14px;line-height:1.6;color:var(--ink-2);max-width:76ch}
+.eyebrow{font-size:10.5px;font-weight:600;letter-spacing:.09em}
+.topnavbtn,.navbtn{font-weight:500}
+.topnavbtn{font-size:13px}
+.navbtn{font-size:13.5px}
+.status{font-size:12.5px;color:var(--ink-2)}
+.kpi{border-color:var(--rule-strong);box-shadow:0 1px 2px rgba(20,32,38,.04)}
+.kpi .k{font-size:10.5px;color:var(--ink-2);letter-spacing:.045em}
+.kpi .v{font-size:23px;font-weight:600;color:var(--ink)}
+.factpill{border-color:var(--rule-strong);color:var(--ink-2)}
+.factpill b{font-size:18px;font-weight:600}
+.analysisstat{border-color:var(--rule-strong)}
+.analysisstat span{font-size:10.5px;color:var(--ink-2)}
+.analysisstat strong{font-weight:600;color:var(--ink)}
+.analysisstat small{font-size:11px;color:var(--ink-3)}
+table{font-size:13.5px}
+th{
+  font-size:10.5px;
+  font-weight:600;
+  color:var(--ink-2);
+  letter-spacing:.035em;
+  background:var(--surface);
+}
+td.pad{padding:10px 12px}
+input[type=text],input[type=search],input[type=date],input[type=number],select,textarea{
+  font-family:var(--sans);
+  color:var(--ink);
+}
+textarea{font-size:14px;line-height:1.6}
+.card,.newsitem,.analysispanel,.factinterpret,.riskcard,.decisioncard,.dailyitem,.companyquote,.valuationhero{
+  border-color:var(--rule-strong);
+}
+.newsitem h3{font-family:var(--sans);font-weight:600;font-size:17px}
+.newsfact,.factinterpret p,.impactrow span,.riskcard p{font-size:12.5px;line-height:1.55}
+.analysislabel{font-size:10px;letter-spacing:.07em}
+.sectionline span{color:var(--ink-3);letter-spacing:.035em}
+.material{font-size:9.5px}
+.verify{font-size:9.5px}
+.marketmetric strong{font-family:var(--sans);font-weight:600}
+.bankbarrow strong{font-weight:600}
+.main{background:var(--bg)}
+.topbar{background:var(--surface);backdrop-filter:blur(8px)}
+.scroll{box-shadow:none;border-color:var(--rule-strong)}
+.strip button,.analysisrun,.gaprow,.queue{box-shadow:none;border-color:var(--rule)}
+.topnavbtn[aria-current="true"],.analysisrun.active{
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 20%,transparent);
+}
+@media(max-width:700px){
+  body{font-size:15px}
+  h2.section{font-size:25px}
+}
