@@ -401,6 +401,59 @@ $("#importBtn").onclick=()=>$("#importFile").click();
 $("#importFile").onchange=e=>{ const f=e.target.files[0]; if(f) importJSON(f); e.target.value=""; };
 $("#signOut").onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 
+
+/* ===================== live research-news ticker ===================== */
+let liveNewsTimer=null, liveNewsChannel=null;
+
+function liveNewsDirection(event){
+  const text=[event.headline,event.fact_summary,event.what_changed].filter(Boolean).join(" ").toLowerCase();
+  if(/(^|\s)-\s?\d|\b(down|declin|fell|falls|falling|loss|lower|drops?|cuts?|negative)\b/.test(text)) return "negative";
+  if(/(^|\s)\+\s?\d|\b(up|rises?|rose|gains?|grew|growth|higher|increases?|positive)\b/.test(text)) return "positive";
+  return "neutral";
+}
+function liveNewsSignature(events){
+  return (events||[]).map(e=>[e.id,e.event_date,e.timestamp_pkt,e.headline].join("|")).join("::");
+}
+function renderLiveNewsTicker(){
+  const host=$("#liveNewsTicker");
+  if(!host) return;
+  const track=host.querySelector(".ticker-track");
+  if(!track) return;
+  const events=(initLiveState().events||[]).slice().sort((a,b)=>
+    String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
+  ).slice(0,10);
+  if(!events.length){
+    track.innerHTML='<span class="ticker-loading">No verified news available.</span>';
+    return;
+  }
+  const item=e=>'<button class="ticker-item '+liveNewsDirection(e)+'" type="button" data-nav="news">'
+    +'<b>'+esc(e.ticker_sector||e.entity_type||"PSX")+'</b>'
+    +'<span class="ticker-sep">•</span><span>'+esc(e.headline||e.event_type||"Market update")+'</span>'
+    +'<time datetime="'+esc(e.event_date||"")+'">'+fmtDate(e.event_date)+'</time></button>';
+  const set=events.map(item).join("");
+  track.innerHTML='<div class="ticker-set">'+set+'</div><div class="ticker-set" aria-hidden="true">'+set+'</div>';
+}
+async function refreshLiveNewsTicker(){
+  if(!sb || document.hidden) return;
+  const live=initLiveState();
+  const before=liveNewsSignature(live.events);
+  const {data,error}=await sb.from("research_events").select("*").order("event_date",{ascending:false});
+  if(error) return;
+  live.events=data||[];
+  mapEventsIntoLegacy();
+  renderLiveNewsTicker();
+  if(before!==liveNewsSignature(live.events) && ["dash","news","trade-dash"].includes(route.view)) render();
+}
+function startLiveNewsTicker(){
+  renderLiveNewsTicker();
+  if(!liveNewsTimer) liveNewsTimer=setInterval(refreshLiveNewsTicker,60000);
+  if(!liveNewsChannel && sb && typeof sb.channel==="function"){
+    liveNewsChannel=sb.channel("research-events-ticker")
+      .on("postgres_changes",{event:"*",schema:"public",table:"research_events"},refreshLiveNewsTicker)
+      .subscribe();
+  }
+}
+
 function gateMsg(t){ $("#gateMsg").textContent=t||""; }
 async function startApp(sess){
   session = sess;
@@ -411,6 +464,7 @@ async function startApp(sess){
   await loadMasterData();
   await loadLiveResearchData();
   renderNav(); render();
+  startLiveNewsTicker();
   setStatus("Live database connected");
   const aiEnabled=Boolean(window.CONFIG&&CONFIG.aiFillEnabled);
   $("#cmd").hidden = !aiEnabled;
