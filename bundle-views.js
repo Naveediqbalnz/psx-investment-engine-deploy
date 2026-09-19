@@ -176,6 +176,209 @@ function companiesHTML(){
 
 ;
 /* ===== assets/views-02-02.js ===== */
+function companyLiveFinancials(ticker){
+  const t=cleanTicker(ticker);
+  return (initLiveState().financials||[]).filter(x=>cleanTicker(x.ticker)===t)
+    .slice().sort((a,b)=>String(b.period_end||"").localeCompare(String(a.period_end||"")));
+}
+function companyLiveRatios(ticker){
+  const t=cleanTicker(ticker);
+  return (initLiveState().ratios||[]).filter(x=>cleanTicker(x.ticker)===t)
+    .slice().sort((a,b)=>String(b.as_of||"").localeCompare(String(a.as_of||"")));
+}
+function companyLiveEvents(ticker){
+  const t=cleanTicker(ticker);
+  return (initLiveState().events||[]).filter(e=>{
+    const tag=cleanTicker(e.ticker_sector||"");
+    const head=String(e.headline||"").toUpperCase();
+    return tag===t || head.includes(t);
+  }).slice().sort((a,b)=>String(b.event_date||"").localeCompare(String(a.event_date||"")));
+}
+function companySourceDocuments(ticker){
+  const t=cleanTicker(ticker);
+  return (initLiveState().sourceDocuments||[]).filter(d=>cleanTicker(d.entity_key)===t)
+    .slice().sort((a,b)=>String(b.period_end||b.verified_at||"").localeCompare(String(a.period_end||a.verified_at||"")));
+}
+function changePct(a,b){
+  const x=num(a), y=num(b);
+  return (x===null||y===null||y===0)?null:((x-y)/Math.abs(y))*100;
+}
+function pkrBn(v,d=1){
+  const x=num(v);
+  return x===null?"—":fmt(x/1e9,d);
+}
+function pkrMBn(v,d=1){
+  const x=num(v);
+  return x===null?"—":fmt(x/1000,d);
+}
+function bankTrendBars(rows){
+  const annual=rows.filter(r=>r.period_type==="FY"&&num(r.profit_after_tax)!==null)
+    .slice().sort((a,b)=>Number(a.fiscal_year)-Number(b.fiscal_year));
+  if(!annual.length) return '<p class="empty">No annual PAT history available.</p>';
+  const max=Math.max(...annual.map(r=>num(r.profit_after_tax)||0),1);
+  return '<div class="bankbars">'+annual.map(r=>{
+    const pat=num(r.profit_after_tax)||0;
+    const w=Math.max(4,(pat/max)*100);
+    return '<div class="bankbarrow"><span>'+esc(r.fiscal_year||"—")+'</span><div class="bankbartrack"><i style="width:'+w.toFixed(1)+'%"></i></div><strong>Rs '+pkrBn(pat,1)+'bn</strong></div>';
+  }).join("")+'</div>';
+}
+function bankDataGap(label,available,detail){
+  return '<div class="gaprow"><span class="gapdot '+(available?"ok":"missing")+'"></span><div><strong>'+esc(label)+'</strong><small>'+esc(detail||"")+'</small></div><b>'+(available?"AVAILABLE":"—")+'</b></div>';
+}
+function bankCompanyHTML(t,c,master,dc){
+  const fs=companyLiveFinancials(t);
+  const ratios=companyLiveRatios(t);
+  const docs=companySourceDocuments(t);
+  const companyEvents=companyLiveEvents(t);
+  const macroEvents=(initLiveState().events||[]).filter(e=>String(e.entity_type||"").toLowerCase()==="macro")
+    .slice().sort((a,b)=>String(b.event_date||"").localeCompare(String(a.event_date||"")));
+  const bankSector=masterSectorByName("COMMERCIAL BANKS")||{};
+  const tab=route.companyTab||"overview";
+  const tabs=[["overview","Overview"],["financials","Financials"],["ratios","Ratios"],["valuation","Valuation"],["news","News"],["analysis","Analysis"],["sources","Sources"]]
+    .map(x=>'<button class="companytab" data-company-tab="'+x[0]+'" aria-selected="'+(tab===x[0])+'">'+x[1]+'</button>').join("");
+
+  const price=num(master&&master.last_price!=null?master.last_price:c.price);
+  const pe=num(master&&master.pe);
+  const marketCapM=num(master&&master.market_cap_pkr_m);
+  const sharesM=num(master&&master.shares_m);
+  const freeFloat=num(master&&master.free_float_pct);
+  const latestQ=fs.find(r=>String(r.period_type||"").startsWith("Q"))||null;
+  const priorQ=latestQ?fs.find(r=>r.period_type===latestQ.period_type && Number(r.fiscal_year)===Number(latestQ.fiscal_year)-1):null;
+  const annual=fs.filter(r=>r.period_type==="FY").slice().sort((a,b)=>Number(b.fiscal_year)-Number(a.fiscal_year));
+  const latestFY=annual[0]||null, priorFY=annual[1]||null;
+  const qPatGrowth=latestQ&&priorQ?changePct(latestQ.profit_after_tax,priorQ.profit_after_tax):null;
+  const fyPatGrowth=latestFY&&priorFY?changePct(latestFY.profit_after_tax,priorFY.profit_after_tax):null;
+  const tb=findMacro("12M T-Bill Cut-off Yield");
+  const policy=findMacro("SBP Policy Rate");
+  const cpi=findMacro("CPI Inflation YoY");
+  const earningsYield=pe&&pe>0?100/pe:null;
+  const tbill=num(tb&&tb.latest_value);
+  const yieldGap=earningsYield!==null&&tbill!==null?earningsYield-tbill:null;
+
+  const header='<p class="meta"><a href="#" data-nav="companies">Companies</a> / Commercial Banks</p>'
+    +'<div class="companyhero"><div><div class="eyebrow">BANK RESEARCH</div><div class="companytitle"><h2 class="section">'+esc(t)+' — '+esc(c.name||master.company_name||"")+'</h2>'
+    +verificationBadge((master&&master.profile_verification_status)||(dc&&dc.verification_status))+'</div>'
+    +'<p class="sub">Sector-aware bank research page. Verified facts and model gaps are kept separate.</p>'
+    +'<div class="tagrow"><span>'+esc(master.coverage_tier||"—")+'</span><span>Commercial Banks</span><span>FY end '+esc(master.fy_end||"—")+'</span></div></div>'
+    +'<div class="companyquote"><span>Price</span><strong>Rs '+fmt(price,2)+'</strong><small>'+esc(master.price_date||"—")+'</small></div></div>'
+    +'<div class="bank-kpis">'
+      +'<div class="kpi"><div class="k">Market cap</div><div class="v">Rs '+(marketCapM===null?"—":fmt(marketCapM/1000,1))+'bn</div></div>'
+      +'<div class="kpi"><div class="k">P/E</div><div class="v">'+(pe===null?"—":fmt(pe,2)+"x")+'</div></div>'
+      +'<div class="kpi"><div class="k">Free float</div><div class="v">'+(freeFloat===null?"—":fmt(freeFloat,2)+"%")+'</div></div>'
+      +'<div class="kpi"><div class="k">Shares</div><div class="v">'+(sharesM===null?"—":fmt(sharesM,1)+"m")+'</div></div>'
+      +'<div class="kpi"><div class="k">Latest report</div><div class="v smallv">'+esc(master.latest_report_period||"—")+'</div></div>'
+    +'</div><div class="companytabs">'+tabs+'</div>';
+
+  let body="";
+  if(tab==="overview"){
+    body='<div class="sectionline"><h3 class="block">Earnings snapshot</h3><span>PSX standardized financials</span></div>'
+      +'<div class="bank-kpis four">'
+        +'<div class="kpi"><div class="k">'+esc(latestQ?(latestQ.period_type+" "+latestQ.fiscal_year+" PAT"):"Latest quarter PAT")+'</div><div class="v">Rs '+(latestQ?pkrBn(latestQ.profit_after_tax,2):"—")+'bn</div></div>'
+        +'<div class="kpi"><div class="k">'+esc(latestQ?(latestQ.period_type+" EPS"):"Latest EPS")+'</div><div class="v">'+(latestQ?fmtSmart(latestQ.eps,2):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Quarter PAT YoY</div><div class="v '+(qPatGrowth===null?"na":qPatGrowth>=0?"pos":"neg")+'">'+(qPatGrowth===null?"—":pct(qPatGrowth))+'</div></div>'
+        +'<div class="kpi"><div class="k">'+esc(latestFY?("FY"+latestFY.fiscal_year+" PAT"):"Latest FY PAT")+'</div><div class="v">Rs '+(latestFY?pkrBn(latestFY.profit_after_tax,1):"—")+'bn</div></div>'
+      +'</div>'
+      +'<div class="grid2 bank-overview-grid"><div class="card"><div class="analysislabel">ANNUAL PAT TREND</div>'+bankTrendBars(fs)+'</div>'
+      +'<div class="card"><div class="analysislabel">BANK FRAMEWORK</div>'
+        +'<dl class="researchdl"><dt>Macro sensitivity</dt><dd>'+esc(bankSector.macro_sensitivity||"—")+'</dd>'
+        +'<dt>Key KPIs</dt><dd>'+esc(bankSector.key_kpis||"—")+'</dd>'
+        +'<dt>Primary valuation</dt><dd>'+esc(bankSector.primary_valuation_metric||"—")+'</dd>'
+        +'<dt>Opportunity cost</dt><dd>'+esc(bankSector.opportunity_vs_tbill||"—")+'</dd></dl></div></div>'
+      +'<div class="sectionline"><h3 class="block">Data coverage</h3><span>What the model can and cannot support yet</span></div>'
+      +'<div class="gapgrid">'
+        +bankDataGap("Price / market profile",price!==null&&marketCapM!==null,"PSX profile verified")
+        +bankDataGap("PAT / EPS history",fs.some(x=>num(x.profit_after_tax)!==null),fmtSmart(fs.length)+" structured periods currently loaded")
+        +bankDataGap("ROE",ratios.some(x=>num(x.roe_pct)!==null),"Needed for bank quality and P/B work")
+        +bankDataGap("Book value / P/B",num(master.pb)!==null||num(master.bvps)!==null,"Required for core bank valuation")
+        +bankDataGap("Dividend yield / payout",num(master.dividend_yield_pct)!==null||num(master.dps_ttm)!==null,"Required for total-return analysis")
+        +bankDataGap("NIM / CASA / CAR / asset quality",false,"Issuer-report ingestion still required")
+      +'</div>';
+  } else if(tab==="financials"){
+    const ann=annual.slice().sort((a,b)=>Number(b.fiscal_year)-Number(a.fiscal_year)).map(r=>
+      '<tr><td class="pad">'+esc(r.fiscal_year)+'</td><td class="pad num">'+pkrBn(r.profit_after_tax,2)+'</td><td class="pad num">'+fmtSmart(r.eps,2)+'</td><td class="pad">'+verificationBadge(r.verification_status)+'</td><td class="pad"><a href="'+esc(safeHttpsUrl(r.source_url))+'" target="_blank" rel="noreferrer">PSX</a></td></tr>'
+    ).join("");
+    const qs=fs.filter(r=>String(r.period_type||"").startsWith("Q")).map(r=>
+      '<tr><td class="pad">'+esc(r.period_type+" "+r.fiscal_year)+'</td><td class="pad">'+esc(r.period_end||"—")+'</td><td class="pad num">'+pkrBn(r.profit_after_tax,2)+'</td><td class="pad num">'+fmtSmart(r.eps,2)+'</td><td class="pad">'+verificationBadge(r.verification_status)+'</td></tr>'
+    ).join("");
+    body='<div class="sectionline"><h3 class="block">Annual earnings</h3><span>PKR billions except EPS</span></div>'
+      +'<div class="scroll"><table><thead><tr><th>FY</th><th class="num">PAT Rs bn</th><th class="num">EPS Rs</th><th>Verification</th><th>Source</th></tr></thead><tbody>'+ann+'</tbody></table></div>'
+      +'<div class="sectionline"><h3 class="block">Quarterly earnings</h3><span>Standalone reported periods</span></div>'
+      +'<div class="scroll"><table><thead><tr><th>Period</th><th>Date</th><th class="num">PAT Rs bn</th><th class="num">EPS Rs</th><th>Verification</th></tr></thead><tbody>'+qs+'</tbody></table></div>'
+      +'<div class="sectionline"><h3 class="block">Annual PAT trend</h3><span>Visual scale</span></div><div class="card">'+bankTrendBars(fs)+'</div>';
+  } else if(tab==="ratios"){
+    const provisional=ratios.filter(r=>String(r.verification_status||"").toUpperCase()==="PROVISIONAL").length;
+    body='<div class="bank-kpis four">'
+      +'<div class="kpi"><div class="k">P/E</div><div class="v">'+(pe===null?"—":fmt(pe,2)+"x")+'</div><div class="meta">Company master</div></div>'
+      +'<div class="kpi"><div class="k">P/B</div><div class="v na">—</div></div>'
+      +'<div class="kpi"><div class="k">ROE</div><div class="v na">—</div></div>'
+      +'<div class="kpi"><div class="k">Dividend yield</div><div class="v na">—</div></div>'
+      +'</div>'
+      +'<div class="noticebox"><strong>Ratio coverage is incomplete.</strong><span>'+fmtSmart(provisional)+' ratio rows exist as provisional placeholders, but the bank-specific values are not populated. They are not treated as zero.</span></div>'
+      +'<div class="sectionline"><h3 class="block">Required banking KPIs</h3><span>Issuer reports needed</span></div>'
+      +'<div class="gapgrid">'
+        +bankDataGap("ROE",false,"Return on equity")
+        +bankDataGap("Book value per share",false,"Core input for P/B valuation")
+        +bankDataGap("Net interest margin",false,"Earnings-spread quality")
+        +bankDataGap("CASA / deposit mix",false,"Funding-cost quality")
+        +bankDataGap("Capital adequacy ratio",false,"Capital buffer")
+        +bankDataGap("Infection / NPL ratio",false,"Asset quality")
+      +'</div>';
+  } else if(tab==="valuation"){
+    const base=num(c.base), bear=num(c.bear), bull=num(c.bull);
+    const upside=price&&base!==null?((base-price)/price)*100:null;
+    body='<div class="valuationhero"><div><div class="analysislabel">BANK VALUATION FRAMEWORK</div><h3>P/B + sustainable ROE + payout + residual income</h3><p>For a bank, P/E alone is not enough. The model needs book value, sustainable ROE, payout/dividend data and a cost-of-equity assumption before it can produce a defensible intrinsic-value range.</p></div>'
+      +'<div class="valuationstatus">'+verificationBadge("MISSING")+'<span>No stored intrinsic value yet</span></div></div>'
+      +'<div class="bank-kpis four">'
+        +'<div class="kpi"><div class="k">Current P/E</div><div class="v">'+(pe===null?"—":fmt(pe,2)+"x")+'</div></div>'
+        +'<div class="kpi"><div class="k">Earnings yield proxy</div><div class="v">'+(earningsYield===null?"—":fmt(earningsYield,2)+"%")+'</div></div>'
+        +'<div class="kpi"><div class="k">12M T-bill</div><div class="v">'+(tbill===null?"—":fmt(tbill,2)+"%")+'</div></div>'
+        +'<div class="kpi"><div class="k">Yield proxy gap</div><div class="v '+(yieldGap===null?"na":yieldGap>=0?"pos":"neg")+'">'+(yieldGap===null?"—":(yieldGap>=0?"+":"")+fmt(yieldGap,2)+"pp")+'</div></div>'
+      +'</div><p class="hint">The P/E earnings-yield proxy and T-bill yield are not directly equivalent; bank growth, payout, capital and risk still need to be modeled.</p>'
+      +'<div class="sectionline"><h3 class="block">Personal fair-value range</h3><span>Saved only when signed in</span></div>'
+      +'<div class="inline">'
+        +'<div class="field"><label>Bear Rs</label><input type="text" data-co-field="bear" value="'+esc(c.bear||"")+'"></div>'
+        +'<div class="field"><label>Base Rs</label><input type="text" data-co-field="base" value="'+esc(c.base||"")+'"></div>'
+        +'<div class="field"><label>Bull Rs</label><input type="text" data-co-field="bull" value="'+esc(c.bull||"")+'"></div>'
+        +'<div class="field"><label>Required return %</label><input type="text" data-co-field="required" value="'+esc(c.required||"")+'"></div>'
+      +'</div>'
+      +'<div class="bank-kpis four" style="margin-top:14px">'
+        +'<div class="kpi"><div class="k">Base upside</div><div class="v '+(upside===null?"na":upside>=0?"pos":"neg")+'">'+(upside===null?"—":pct(upside))+'</div></div>'
+        +'<div class="kpi"><div class="k">P/B input</div><div class="v na">—</div></div>'
+        +'<div class="kpi"><div class="k">ROE input</div><div class="v na">—</div></div>'
+        +'<div class="kpi"><div class="k">Payout input</div><div class="v na">—</div></div>'
+      +'</div>';
+  } else if(tab==="news"){
+    const own=companyEvents.map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+esc(e.event_date||"—")+'</span><span>'+esc(e.event_type||"Event")+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>').join("");
+    const relevant=macroEvents.slice(0,5).map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+esc(e.event_date||"—")+'</span><span>Bank macro</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>').join("");
+    body='<div class="sectionline"><h3 class="block">MEBL-specific events</h3><span>Company feed</span></div>'+(own||'<p class="empty">No MEBL-specific research events have been ingested yet.</p>')
+      +'<div class="sectionline"><h3 class="block">Bank-relevant macro</h3><span>Rates and inflation</span></div>'+(relevant||'<p class="empty">No bank-relevant macro events available.</p>');
+  } else if(tab==="analysis"){
+    const latestQText=latestQ&&priorQ
+      ? latestQ.period_type+" "+latestQ.fiscal_year+" PAT was Rs "+pkrBn(latestQ.profit_after_tax,2)+"bn versus Rs "+pkrBn(priorQ.profit_after_tax,2)+"bn in "+priorQ.period_type+" "+priorQ.fiscal_year+", a "+pct(qPatGrowth)+" change."
+      : "Comparable quarterly trend is not available.";
+    const fyText=latestFY&&priorFY
+      ? "FY"+latestFY.fiscal_year+" PAT was Rs "+pkrBn(latestFY.profit_after_tax,1)+"bn versus Rs "+pkrBn(priorFY.profit_after_tax,1)+"bn in FY"+priorFY.fiscal_year+", a "+pct(fyPatGrowth)+" change."
+      : "Comparable annual trend is not available.";
+    body='<div class="factinterpret"><div><span class="analysislabel">FACT</span><strong>Earnings pattern</strong><p>'+esc(fyText)+'</p><p>'+esc(latestQText)+'</p></div>'
+      +'<div><span class="analysislabel">INTERPRETATION</span><p>The database shows the latest full-year change and the latest comparable-quarter change in the fact panel. These are directional observations, not yet a valuation conclusion.</p></div></div>'
+      +'<div class="analysisgrid">'
+        +'<div class="analysispanel"><div class="analysislabel">MACRO</div><div class="impactrow"><strong>Policy rate</strong><span>'+(policy&&policy.latest_value!=null?fmtSmart(policy.latest_value)+"%":"—")+'</span></div><div class="impactrow"><strong>CPI YoY</strong><span>'+(cpi&&cpi.latest_value!=null?fmtSmart(cpi.latest_value)+"%":"—")+'</span></div><div class="impactrow"><strong>12M T-bill</strong><span>'+(tb&&tb.latest_value!=null?fmtSmart(tb.latest_value)+"%":"—")+'</span></div></div>'
+        +'<div class="analysispanel"><div class="analysislabel">BANK DRIVERS</div><div class="impactrow"><span>'+esc(bankSector.macro_sensitivity||"—")+'</span></div><div class="impactrow"><span>'+esc(bankSector.key_kpis||"—")+'</span></div></div>'
+        +'<div class="analysispanel"><div class="analysislabel">VALUATION CONTEXT</div><div class="impactrow"><strong>P/E</strong><span>'+(pe===null?"—":fmt(pe,2)+"x")+'</span></div><div class="impactrow"><strong>Earnings-yield proxy</strong><span>'+(earningsYield===null?"—":fmt(earningsYield,2)+"%")+'</span></div><div class="impactrow"><strong>12M T-bill</strong><span>'+(tbill===null?"—":fmt(tbill,2)+"%")+'</span></div></div>'
+      +'</div>'
+      +'<div class="sectionline"><h3 class="block">Research required before intrinsic value</h3><span>Priority data gaps</span></div>'
+      +'<div class="queue warn"><strong>MEBL</strong><span class="why">Ingest issuer Q2 2026 balance sheet and notes for equity, book value and capital data.</span><span class="act">Financials</span></div>'
+      +'<div class="queue warn"><strong>MEBL</strong><span class="why">Populate ROE, BVPS, P/B, DPS/payout, NIM, CASA, CAR and asset-quality metrics.</span><span class="act">Ratios</span></div>'
+      +'<div class="queue warn"><strong>MEBL</strong><span class="why">Only then run residual-income / ROE-vs-COE and dividend valuation ranges.</span><span class="act">Valuation</span></div>';
+  } else {
+    const srcRows=docs.map(d=>'<tr><td class="pad"><strong>'+esc(d.title||d.document_type||"—")+'</strong></td><td class="pad">'+esc(d.document_type||"—")+'</td><td class="pad">'+esc(d.period_end||"—")+'</td><td class="pad">'+verificationBadge(d.verification_status)+'</td><td class="pad">'+(safeHttpsUrl(d.source_url)?'<a href="'+esc(safeHttpsUrl(d.source_url))+'" target="_blank" rel="noreferrer">Open source</a>':"—")+'</td></tr>').join("");
+    body='<div class="sectionline"><h3 class="block">Source documents</h3><span>Evidence lineage</span></div>'
+      +'<div class="scroll"><table><thead><tr><th>Document</th><th>Type</th><th>Period</th><th>Verification</th><th>Link</th></tr></thead><tbody>'+(srcRows||'<tr><td class="pad empty" colspan="5">No source documents found.</td></tr>')+'</tbody></table></div>'
+      +'<div class="noticebox"><strong>Verification hierarchy</strong><span>Issuer reports will take precedence for detailed bank ratios and balance-sheet analysis. The current earnings history is from the official PSX standardized company financials table.</span></div>';
+  }
+  return header+body;
+}
+
 function companyHTML(t){
   const c=state.companies[t]||ensureCompanyDetailFromMaster(t);
   if(!c) return '<h2 class="section">Not found</h2><p class="sub">That company is not in the live company universe. <a href="#" data-nav="companies">Back to the list</a>.</p>';
@@ -186,6 +389,7 @@ function companyHTML(t){
   const master=masterCompanyByTicker(t);
   const masterSector=master ? (master.sector||"—") : (c.sectorName||secName(c.sector));
   const dc=c.dataCoverage||null;
+  if(masterSector==="COMMERCIAL BANKS") return bankCompanyHTML(t,c,master||{},dc);
 
   const rows=(c.fy||[]).map(r=>{
     const src=safeHttpsUrl(r.source_url)
