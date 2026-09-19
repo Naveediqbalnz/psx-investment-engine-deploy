@@ -575,3 +575,16 @@ input:focus,select:focus,textarea:focus{
 .resultempty{display:flex;flex-direction:column;gap:3px;color:var(--ink)}.resultempty.prompt{border-style:dashed}.resultempty.loading{border-color:var(--accent)}.resultempty.error{border-color:var(--alert)}
 @media(max-width:1100px){.deskstats{grid-template-columns:repeat(3,1fr)}.deskmetrics{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.deskstats{grid-template-columns:repeat(2,1fr)}.deskfindings{grid-template-columns:1fr}.resulthead{flex-direction:column}.runstamp{text-align:left}.deskimpact,.deskaction{grid-template-columns:1fr}}
+
+
+/* ===== valuation scenarios ===== */
+.valscenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 4px}
+.valscenario{background:var(--surface);border:1px solid var(--rule-strong);border-radius:11px;padding:14px 15px;box-shadow:var(--shadow-sm)}
+.valscenario.base{border-color:var(--accent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--accent) 18%,transparent)}
+.valscenariohead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.valscenariohead>span{font-size:10px;font-weight:600;letter-spacing:.07em;color:var(--ink-3)}
+.valscenario>strong{display:block;font-size:24px;margin:8px 0 2px}
+.valscenario>small{display:block;color:var(--ink-3);font-size:10.5px;line-height:1.45}
+.valscenario dl{display:grid;grid-template-columns:1fr auto;gap:5px 10px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--rule);font-size:11.5px}
+.valscenario dt{color:var(--ink-3)}.valscenario dd{margin:0;color:var(--ink);font-weight:500;text-align:right}
+@media(max-width:900px){.valscenarios{grid-template-columns:1fr}}
