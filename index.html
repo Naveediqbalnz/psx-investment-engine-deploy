@@ -15,7 +15,7 @@ try{
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=auth-recovery-fix-20260919"></script>
-<link rel="stylesheet" href="styles.css?v=compact-search-20260919">
+<link rel="stylesheet" href="styles.css?v=header-tools-right-20260919">
 <style>[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -81,7 +81,10 @@ try{
     <section class="live-news-ticker" id="liveNewsTicker" aria-label="Live market news" aria-live="polite">
       <div class="ticker-label"><span class="ticker-pulse" aria-hidden="true"></span><strong>LIVE</strong></div>
       <div class="ticker-window"><div class="ticker-track"><span class="ticker-loading">Loading latest verified news…</span></div></div>
-      <button class="ticker-open" type="button" data-nav="news" aria-label="Open all news">All news</button>
+      <div class="ticker-actions">
+        <button class="ticker-open" type="button" data-nav="news" aria-label="Open all news">All news</button>
+        <button class="ticker-signout" type="button" id="signOut">Sign out</button>
+      </div>
     </section>
     <div class="topbar">
       <div class="workspace-switch top-workspace" aria-label="Workspace">
@@ -105,17 +108,18 @@ try{
         <button class="topnavbtn" data-nav="trade-watchlist">Watchlist</button>
         <button class="topnavbtn" data-nav="trade-journal">Journal</button>
       </div>
-      <div class="globalsearch" id="globalSearchWrap">
-        <input id="globalSearch" type="search" autocomplete="off" placeholder="Search ticker" aria-label="Search PSX companies" data-guest-enabled>
-        <div class="searchresults" id="globalSearchResults" hidden></div>
+      <div class="topbar-tools">
+        <div class="globalsearch" id="globalSearchWrap">
+          <input id="globalSearch" type="search" autocomplete="off" placeholder="Search ticker" aria-label="Search PSX companies" data-guest-enabled>
+          <div class="searchresults" id="globalSearchResults" hidden></div>
+        </div>
+        <div class="top-actions" aria-label="Portal actions">
+          <button class="btn small" id="themeBtn">Dark mode</button>
+          <button class="btn small" id="exportBtn" hidden>Export</button>
+          <button class="btn small" id="importBtn">Import</button>
+        </div>
       </div>
-      <span class="status" id="status">Loading</span>
-      <div class="top-actions" aria-label="Portal actions">
-        <button class="btn small" id="themeBtn">Dark mode</button>
-        <button class="btn small" id="exportBtn" hidden>Export</button>
-        <button class="btn small" id="importBtn">Import</button>
-        <button class="btn small" id="signOut">Sign out</button>
-      </div>
+      <span class="status" id="status" hidden>Loading</span>
       <input type="file" id="importFile" accept="application/json" hidden>
     </div>
     <div class="cmd" id="cmd" hidden>
