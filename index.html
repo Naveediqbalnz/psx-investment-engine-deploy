@@ -14,17 +14,17 @@ try{
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=ui-v2-trading-terminal-20260919"></script>
-<link rel="stylesheet" href="styles.css?v=ui-v2-trading-terminal-20260919">
+<script src="config.js?v=ui-v2-private-auth-20260919"></script>
+<link rel="stylesheet" href="styles.css?v=ui-v2-private-auth-20260919">
 </head>
 <body>
-<div id="gate" class="gate" hidden style="display:none!important">
+<div id="gate" class="gate" hidden>
   <div class="gatebox">
-    <h1>PSX Sector Desk</h1>
-    <p>Sign in to open your research file.</p>
+    <h1>PSX Desk</h1>
+    <p>Sign in to open your private research portal.</p>
     <div class="field"><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
     <div class="field"><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
-    <div class="gaterow" id="standardAuthActions"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp">Create account</button><button class="btn" id="forgotPw">Forgot password</button></div>
+    <div class="gaterow" id="standardAuthActions"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp" hidden>Create account</button><button class="btn" id="forgotPw">Forgot password</button></div>
     <div id="recoveryBox" hidden>
       <div class="field"><label for="newPw">New password</label><input type="password" id="newPw" autocomplete="new-password"></div>
       <div class="gaterow"><button class="btn primary" id="setNewPw">Set new password</button></div>
@@ -32,7 +32,7 @@ try{
     <p class="gatemsg" id="gateMsg"></p>
   </div>
 </div>
-<div class="shell" id="app">
+<div class="shell" id="app" hidden>
   <nav class="rail" aria-label="Sections">
     <div class="brand"><h1>PSX Desk</h1><p>Investment & trading research</p></div>
     <div class="workspace-switch rail-workspace" aria-label="Workspace">
@@ -122,8 +122,8 @@ try{
   </div>
 </div>
 
-<script src="bundle-core.js?v=ui-v2-trading-terminal-20260919"></script>
-<script src="bundle-views.js?v=ui-v2-trading-terminal-20260919"></script>
-<script src="bundle-runtime.js?v=ui-v2-trading-terminal-20260919"></script>
+<script src="bundle-core.js?v=ui-v2-private-auth-20260919"></script>
+<script src="bundle-views.js?v=ui-v2-private-auth-20260919"></script>
+<script src="bundle-runtime.js?v=ui-v2-private-auth-20260919"></script>
 </body>
 </html>
