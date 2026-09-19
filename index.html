@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PSX Sector Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <div class="gatebox">
+    <h1>PSX Sector Desk</h1>
+    <p>Sign in to open your research file.</p>
+    <div class="field"><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
+    <div class="field"><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
+    <div class="gaterow"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp">Create account</button></div>
+    <p class="gatemsg" id="gateMsg"></p>
+  </div>
+</div>
+<div class="shell" id="app" hidden>
+  <nav class="rail" aria-label="Sections">
+    <div class="brand"><h1>PSX Sector Desk</h1><p>Living research file</p></div>
+    <div class="navgroup">
+      <button class="navbtn" data-nav="dash">Dashboard</button>
+      <button class="navbtn" data-nav="macro">Macro</button>
+    </div>
+    <div class="navgroup"><h2>Sectors</h2><div id="sectorNav"></div></div>
+    <div class="navgroup"><h2>Work</h2>
+      <button class="navbtn" data-nav="companies">Companies</button>
+      <button class="navbtn" data-nav="masters">Master data</button>
+      <button class="navbtn" data-nav="valuation">Valuation</button>
+      <button class="navbtn" data-nav="portfolio">Portfolio</button>
+      <button class="navbtn" data-nav="events">Events</button>
+      <button class="navbtn" data-nav="queue">Research queue</button>
+      <button class="navbtn" data-nav="log">Decision log</button>
+    </div>
+    <div class="navgroup">
+      <button class="navbtn" data-nav="sources">Sources</button>
+      <button class="navbtn" data-nav="method">How to run it</button>
+    </div>
+  </nav>
+  <div class="main">
+    <div id="banner"></div>
+    <div class="topbar">
+      <span class="status" id="status">Loading</span>
+      <button class="btn small" id="themeBtn">Theme</button>
+      <button class="btn small" id="exportBtn" hidden>Export</button>
+      <button class="btn small" id="importBtn">Import</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+      <button class="btn small" id="signOut">Sign out</button>
+    </div>
+    <div class="cmd" id="cmd" hidden>
+      <div class="cmdrow">
+        <textarea id="cmdInput" rows="1" placeholder="Say what changed — &quot;August cement dispatches 4.1mn tonnes, coal $104&quot;"></textarea>
+        <button class="btn primary" id="cmdSend">Fill in</button>
+      </div>
+      <p class="cmdhint">Plain sentences, a pasted note, or your phone's dictation. It works out where each number goes and shows you before saving.</p>
+      <div id="cmdOut"></div>
+    </div>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+
+<script src="bundle-core.js"></script>
+<script src="bundle-views.js"></script>
+<script src="bundle-runtime.js"></script>
+</body>
+</html>
