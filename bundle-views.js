@@ -1506,28 +1506,29 @@ function tradingChartInstruments(){
   const seen=new Set();
   const companies=(initMasterState().companies||[]).filter(c=>{
     const ticker=cleanTicker(c.ticker);
-    if(!ticker||seen.has(ticker)) return false;
+    if(!ticker||ticker==="KSE100"||seen.has(ticker)) return false;
     seen.add(ticker);
     return true;
   }).sort((a,b)=>cleanTicker(a.ticker).localeCompare(cleanTicker(b.ticker)));
-  return [{ticker:"KSE100",label:"KSE-100",name:"Pakistan Stock Exchange benchmark index",record:null}].concat(companies.map(c=>({
+  const stocks=companies.map(c=>({
     ticker:cleanTicker(c.ticker),
     label:cleanTicker(c.ticker),
     name:c.company_name||"",
     record:c
-  })));
+  }));
+  return stocks.length?stocks:[{ticker:"MEBL",label:"MEBL",name:"Meezan Bank Limited",record:null}];
 }
 function tradingSelectedInstrument(){
   const instruments=tradingChartInstruments();
-  const selected=cleanTicker(route.tradeTicker||"KSE100");
-  return instruments.find(x=>x.ticker===selected)||instruments[0];
+  const selected=cleanTicker(route.tradeTicker||"MEBL");
+  return instruments.find(x=>x.ticker===selected)||instruments.find(x=>x.ticker==="MEBL")||instruments[0];
 }
 function tradingViewChartURL(mode,range,ticker){
   const theme=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
   const candle=mode==="trading"||mode==="volume";
   const studies=(mode==="volume"||mode==="trading")?["Volume@tv-basicstudies"]:[];
   const params=new URLSearchParams({
-    symbol:"PSX:"+(cleanTicker(ticker)||"KSE100"),
+    symbol:"PSX:"+(cleanTicker(ticker)||"MEBL"),
     interval:range==="1D"?"15":"D",
     range:tradingViewRange(range),
     timezone:"Asia/Karachi",
@@ -1566,7 +1567,7 @@ function tradingChartHTML(){
   const chartUrl=tradingViewChartURL(mode,range,instrument.ticker);
   const options=instruments.map(x=>'<option value="'+esc(x.ticker)+'" '+(x.ticker===instrument.ticker?'selected':'')+'>'+esc(x.label+(x.name?' — '+x.name:''))+'</option>').join("");
   return '<section class="marketterminal">'
-    +'<div class="chartpickerbar"><label for="tradeTickerSelect"><span>Chart ticker</span><select id="tradeTickerSelect" aria-label="Choose PSX stock or index">'+options+'</select></label><small>'+fmtSmart(instruments.length-1)+' PSX companies available</small></div>'
+    +'<div class="chartpickerbar"><label for="tradeTickerSelect"><span>Chart ticker</span><select id="tradeTickerSelect" aria-label="Choose PSX stock">'+options+'</select></label><small>'+fmtSmart(instruments.length)+' PSX companies available</small></div>'
     +'<div class="marketterminal-head"><div class="marketidentity"><div class="marketindexrow"><span class="indexbadge">'+esc(instrument.label)+'</span><span class="officialtag">'+(isIndex?'Official PSX snapshot':esc(instrument.name||"PSX company"))+'</span></div>'
       +'<div class="marketlevel">'+(latestValue===null?"—":fmt(latestValue,2))+'</div>'
       +'<div class="marketmove '+moveClass+'"><strong>'+moveText+'</strong><span>'+pointsText+'</span><small>'+fmtDate(latestDate)+'</small></div></div>'

@@ -13,7 +13,7 @@ function bind(){
   });
   const tradeTickerSelect=$("#tradeTickerSelect");
   if(tradeTickerSelect) tradeTickerSelect.onchange=()=>{
-    route.tradeTicker=cleanTicker(tradeTickerSelect.value)||"KSE100";
+    route.tradeTicker=cleanTicker(tradeTickerSelect.value)||"MEBL";
     render();
   };
   const meblModelInputs=document.querySelectorAll("[data-mebl-model]");
