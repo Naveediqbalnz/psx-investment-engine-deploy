@@ -15,7 +15,7 @@ try{
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=auth-recovery-fix-20260919"></script>
-<link rel="stylesheet" href="styles.css?v=topbar-search-width-20260919">
+<link rel="stylesheet" href="styles.css?v=compact-search-20260919">
 <style>[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -106,7 +106,7 @@ try{
         <button class="topnavbtn" data-nav="trade-journal">Journal</button>
       </div>
       <div class="globalsearch" id="globalSearchWrap">
-        <input id="globalSearch" type="search" autocomplete="off" placeholder="Search ticker / company" aria-label="Search PSX companies" data-guest-enabled>
+        <input id="globalSearch" type="search" autocomplete="off" placeholder="Search ticker" aria-label="Search PSX companies" data-guest-enabled>
         <div class="searchresults" id="globalSearchResults" hidden></div>
       </div>
       <span class="status" id="status">Loading</span>
