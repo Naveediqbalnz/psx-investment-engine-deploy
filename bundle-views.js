@@ -1114,6 +1114,96 @@ function macroRatesResultHTML(live,events,macro){
     +'</section>';
 }
 
+
+function sectorScanResultHTML(live,master,events){
+  const sectors=(master.sectors||[]).slice();
+  const companies=(master.companies||[]).slice();
+  const active=sectors.filter(s=>String(s.regime||"")==="Active coverage");
+  const ready=sectors.filter(s=>String(s.regime||"")==="Framework ready");
+  const unbuilt=sectors.filter(s=>!String(s.regime||"").trim());
+  const withMacro=sectors.filter(s=>String(s.macro_sensitivity||"").trim());
+  const withValuation=sectors.filter(s=>String(s.primary_valuation_metric||"").trim());
+  const withEarnings=sectors.filter(s=>String(s.earnings_direction||"").trim());
+  const withCatalysts=sectors.filter(s=>String(s.catalysts||"").trim());
+  const withRisks=sectors.filter(s=>String(s.risks||"").trim());
+  const sectorEvents=events.filter(e=>String(e.entity_type||"").toLowerCase()==="sector");
+  const companyCount=sectors.reduce((sum,s)=>sum+(num(s.psx_companies)||0),0);
+
+  const stats=[
+    ["PSX sectors",sectors.length,"sector master"],
+    ["Active coverage",active.length,"research framework active"],
+    ["Framework ready",ready.length,"framework built; analysis pending"],
+    ["Not populated",unbuilt.length,"research framework required"],
+    ["Macro frameworks",withMacro.length,sectors.length+" sectors total"],
+    ["Valuation frameworks",withValuation.length,sectors.length+" sectors total"]
+  ].map(x=>'<div class="deskstat"><span>'+esc(x[0])+'</span><strong>'+fmtSmart(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join("");
+
+  const activeCards=active.map(s=>
+    '<article class="sectorscancard active">'
+      +'<div class="sectorcardtop"><div><span>ACTIVE COVERAGE</span><h4>'+esc(s.sector||"—")+'</h4></div><b>'+fmtSmart(s.psx_companies)+' companies</b></div>'
+      +'<dl><dt>Macro sensitivity</dt><dd>'+esc(s.macro_sensitivity||"—")+'</dd>'
+      +'<dt>Key KPIs</dt><dd>'+esc(s.key_kpis||"—")+'</dd>'
+      +'<dt>Valuation framework</dt><dd>'+esc(s.primary_valuation_metric||"—")+'</dd>'
+      +'<dt>Vs T-bill</dt><dd>'+esc(s.opportunity_vs_tbill||"—")+'</dd>'
+      +'<dt>Named coverage</dt><dd>'+esc(s.top_names||"—")+'</dd>'
+      +'<dt>Earnings direction</dt><dd>'+esc(s.earnings_direction||"—")+'</dd>'
+      +'<dt>Catalysts</dt><dd>'+esc(s.catalysts||"—")+'</dd>'
+      +'<dt>Risks</dt><dd>'+esc(s.risks||"—")+'</dd></dl></article>'
+  ).join("");
+
+  const readyRows=ready.map(s=>
+    '<tr><td class="pad"><strong>'+esc(s.sector||"—")+'</strong></td>'
+      +'<td class="pad num">'+fmtSmart(s.psx_companies)+'</td>'
+      +'<td class="pad">'+esc(s.macro_sensitivity||"—")+'</td>'
+      +'<td class="pad">'+esc(s.key_kpis||"—")+'</td>'
+      +'<td class="pad">'+esc(s.primary_valuation_metric||"—")+'</td>'
+      +'<td class="pad">'+esc(s.opportunity_vs_tbill||"—")+'</td></tr>'
+  ).join("");
+
+  const unbuiltRows=unbuilt.map(s=>
+    '<tr><td class="pad"><strong>'+esc(s.sector||"—")+'</strong></td><td class="pad num">'+fmtSmart(s.psx_companies)+'</td>'
+      +'<td class="pad">'+(String(s.macro_sensitivity||"").trim()?"Available":"—")+'</td>'
+      +'<td class="pad">'+(String(s.primary_valuation_metric||"").trim()?"Available":"—")+'</td></tr>'
+  ).join("");
+
+  const eventRows=sectorEvents.map(e=>
+    '<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.ticker_sector||"Sector")+'</span><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span></div>'
+      +'<h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||"—")+'</p>'
+      +'<div class="macroimpactgrid"><div><b>Earnings</b><span>'+esc(e.earnings_impact||"—")+'</span></div><div><b>Valuation</b><span>'+esc(e.valuation_impact||"—")+'</span></div><div><b>Risk</b><span>'+esc(e.risk_impact||"—")+'</span></div><div><b>What changed</b><span>'+esc(e.what_changed||"—")+'</span></div></div>'
+      +(e.required_action?'<div class="newsaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")+'</article>'
+  ).join("");
+
+  const gapRows=[
+    ["Earnings direction",withEarnings.length,sectors.length,"sector earnings trend fields populated"],
+    ["Catalysts",withCatalysts.length,sectors.length,"sector catalyst fields populated"],
+    ["Risks",withRisks.length,sectors.length,"sector risk fields populated"],
+    ["Cross-market comparison",0,sectors.length,"country/peer comparison dataset not yet connected"]
+  ].map(x=>'<div class="sectorcoverage"><div><strong>'+esc(x[0])+'</strong><small>'+esc(x[3])+'</small></div><span>'+fmtSmart(x[1])+' / '+fmtSmart(x[2])+'</span><progress max="'+esc(x[2])+'" value="'+esc(x[1])+'"></progress></div>').join("");
+
+  return '<section class="analysisresult">'
+    +'<div class="resulthead"><div><span class="analysislabel">RUN RESULT</span><h3>Sector Scan</h3><p>PSX sector research coverage and sector-specific analytical frameworks. This run does not rank sectors where valuation, earnings or risk evidence is incomplete.</p></div>'
+      +'<div class="runstamp"><span>Completed</span><strong>'+fmtDate(route.analysisRanAt||todayISO())+'</strong></div></div>'
+    +'<div class="deskstats">'+stats+'</div>'
+    +'<div class="resultnotice limited"><strong>Coverage discipline</strong><span>The sector master represents '+fmtSmart(companyCount)+' company slots versus '+fmtSmart(companies.length)+' companies in the current company universe. Sector counts and company-universe counts can differ because classification/sync timing is not identical. Missing sector conclusions remain —.</span></div>'
+    +'<div class="sectionline"><h3 class="block">Active coverage</h3><span>'+fmtSmart(active.length)+' sector frameworks currently active</span></div>'
+    +(activeCards?'<div class="sectorscangrid">'+activeCards+'</div>':'<div class="resultempty">No active sector frameworks available.</div>')
+    +'<div class="sectionline"><h3 class="block">Framework ready</h3><span>Structure exists; earnings / catalysts / risks still need research</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Sector</th><th class="num">Companies</th><th>Macro sensitivity</th><th>Key KPIs</th><th>Valuation</th><th>Vs T-bill</th></tr></thead><tbody>'
+      +(readyRows||'<tr><td class="pad empty" colspan="6">No framework-ready sectors.</td></tr>')+'</tbody></table></div>'
+    +'<div class="sectionline"><h3 class="block">Research completeness</h3><span>Conclusion fields, not framework fields</span></div>'
+    +'<div class="sectorcovergrid">'+gapRows+'</div>'
+    +'<div class="sectionline"><h3 class="block">Not yet populated</h3><span>'+fmtSmart(unbuilt.length)+' sectors need a research framework</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Sector</th><th class="num">Companies</th><th>Macro framework</th><th>Valuation framework</th></tr></thead><tbody>'
+      +(unbuiltRows||'<tr><td class="pad empty" colspan="4">All sectors have frameworks.</td></tr>')+'</tbody></table></div>'
+    +'<div class="sectionline"><h3 class="block">Sector events</h3><span>Event-driven sector research</span></div>'
+    +(eventRows?'<div class="newsgrid">'+eventRows+'</div>':'<div class="resultempty">No sector-specific research events are stored yet.</div>')
+    +'<div class="sectionline"><h3 class="block">Research actions</h3><span>What must be built before sector opportunity ranking</span></div>'
+    +'<div class="queue warn"><strong>Sector engine</strong><span class="why">Populate earnings direction, catalysts and risks for the 18 active/framework-ready sectors using verified sector and company evidence.</span><span class="act">Priority</span></div>'
+    +'<div class="queue warn"><strong>Coverage expansion</strong><span class="why">Build macro sensitivity, KPI and valuation frameworks for the '+fmtSmart(unbuilt.length)+' currently unpopulated sectors.</span><span class="act">Backlog</span></div>'
+    +'<div class="queue"><strong>Cross-country stage</strong><span class="why">Connect comparable-country / peer-market data before using the cross-market stage in sector conclusions.</span><span class="act">Not available</span></div>'
+    +'</section>';
+}
+
 function analysisHTML(){
   const live=initLiveState();
   const master=initMasterState();
@@ -1246,7 +1336,9 @@ function analysisHTML(){
           ? fullDailyDeskResultHTML(live,master,events,macro)
           : mode==="macro"
             ? macroRatesResultHTML(live,events,macro)
-            : body;
+            : mode==="sectors"
+              ? sectorScanResultHTML(live,master,events)
+              : body;
 
   return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
     +'<p class="sub">Run a focused PSX analysis against the latest research database. Facts and interpretation stay separate.</p></div>'
