@@ -738,3 +738,19 @@ input:focus,select:focus,textarea:focus{
   .ticker-window{overflow-x:auto;mask-image:none;-webkit-mask-image:none}
   .ticker-track{animation:none}
 }
+
+
+/* ===== compact desktop action bar ===== */
+.top-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto;white-space:nowrap}
+@media (min-width:1401px){
+  .topbar{flex-wrap:nowrap}
+  .topnav{flex:0 1 auto}
+  .globalsearch{margin-left:0;flex:1 1 250px;max-width:290px}
+  .status{margin-left:auto;flex:0 0 auto}
+}
+@media (max-width:1400px){
+  .top-actions{margin-left:auto}
+}
+@media (max-width:700px){
+  .top-actions{width:100%;justify-content:flex-end}
+}
