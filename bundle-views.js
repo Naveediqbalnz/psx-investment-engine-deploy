@@ -13,41 +13,51 @@ function render(){
 
 function dashHTML(){
   const m=state.macro;
+  const master=initMasterState();
+  const live=initLiveState();
+  const verifiedDocs=(live.sourceDocuments||[]).filter(x=>x.verification_status==="VERIFIED").length;
+  const factPills=[
+    ["Universe",master.companies.length||"—"],
+    ["Sectors",master.sectors.length||"—"],
+    ["Financial rows",(live.financials||[]).length||"—"],
+    ["Verified sources",verifiedDocs||"—"]
+  ].map(x=>'<span class="factpill"><b>'+esc(x[1])+'</b>'+esc(x[0])+'</span>').join("");
   const kpis = [["kse","KSE-100"],["rate","Policy rate %"],["cpi","CPI YoY %"],["pkr","PKR/USD"]]
     .map(f=>'<div class="kpi"><div class="k">'+esc(f[1])+'</div><div class="v'+(m[f[0]]?"":" na")+'">'
-      +esc(m[f[0]]||"Not recorded")+'</div></div>').join("");
+      +esc(m[f[0]]||"—")+'</div></div>').join("");
   const strip = SECTORS.map(s=>{
     const d=daysSince(state.sectors[s.id].updatedAt);
     return '<button data-nav="sector" data-id="'+s.id+'" class="'+ageClass(d)+'"><span class="nm">'+esc(s.short)+'</span>'
-      +'<span class="days">'+(d===null?"—":d)+'<span class="unit">'+(d===null?"never opened":"days old")+'</span></span></button>';
+      +'<span class="days">'+(d===null?"—":d)+'<span class="unit">'+(d===null?"not reviewed":"days old")+'</span></span></button>';
   }).join("");
   const rank = SECTORS.map(s=>{
     const st=state.sectors[s.id], d=daysSince(st.updatedAt);
-    const mark = st.rating==="Overweight"?"▲":st.rating==="Underweight"?"▼":st.rating==="Neutral"?"■":"·";
+    const mark = st.rating==="Overweight"?"▲":st.rating==="Underweight"?"▼":st.rating==="Neutral"?"■":"";
     return "<tr><td class='pad'><a href='#' data-nav='sector' data-id='"+s.id+"'>"+esc(s.name)+"</a></td>"
-      +"<td class='pad'><span class='rating'><span class='mark'>"+mark+"</span>"+esc(st.rating||"unrated")+"</span></td>"
+      +"<td class='pad'><span class='rating'><span class='mark'>"+mark+"</span>"+esc(st.rating||"—")+"</span></td>"
       +"<td class='pad num'>"+esc(st.conviction||"—")+"</td><td class='pad num'>"+(st.valPct?esc(st.valPct)+"%":"—")+"</td>"
       +"<td class='pad'>"+esc(st.cycle||"—")+"</td><td class='pad num'>"+(d===null?"—":d+"d")+"</td></tr>";
   }).join("");
   const p = positionRows();
+  const hasPrivatePortfolio=Boolean(session);
   const q = researchQueue().slice(0,5);
-  return '<h2 class="section">Pakistan equity dashboard</h2>'
-    +'<p class="sub">Core market, macro and company data are loaded from the live Supabase research database. Personal thesis and valuation notes remain separate; missing values stay blank rather than being invented.</p>'
+  return '<div class="pagehero"><div><div class="eyebrow">PSX INVESTMENT ENGINE</div><h2 class="section">Pakistan equity dashboard</h2>'
+    +'<p class="sub">A single research desk for macro, sectors, companies, valuation and evidence. Missing or unverified values remain — rather than being filled with estimates.</p></div>'
+    +'<div class="factbar">'+factPills+'</div></div>'
     +'<div class="kpis">'+kpis+'</div>'
-    +'<h3 class="block">Sector freshness</h3><div class="strip">'+strip+'</div>'
-    +'<p class="legend">Green under 35 days. Amber past 35. Solid amber past 75 — the file has stopped describing the present.</p>'
-    +'<h3 class="block">Cross-sector ranking</h3>'
+    +'<div class="sectionline"><h3 class="block">Sector freshness</h3><span>Research maintenance</span></div><div class="strip">'+strip+'</div>'
+    +'<p class="legend">Green: reviewed within 35 days. Amber: 36–75 days. Strong amber: more than 75 days.</p>'
+    +'<div class="sectionline"><h3 class="block">Cross-sector view</h3><span>Current research file</span></div>'
     +'<div class="scroll"><table><thead><tr><th>Sector</th><th>Rating</th><th class="num">Conviction</th><th class="num">Val %ile</th><th>Earnings regime</th><th class="num">Updated</th></tr></thead><tbody>'+rank+'</tbody></table></div>'
-    +'<h3 class="block">Portfolio</h3>'
-    +'<div class="kpis"><div class="kpi"><div class="k">Positions</div><div class="v">'+p.rows.length+'</div></div>'
-    +'<div class="kpi"><div class="k">Invested Rs</div><div class="v">'+fmt(p.invested,0)+'</div></div>'
-    +'<div class="kpi"><div class="k">Cash Rs</div><div class="v">'+fmt(p.cash,0)+'</div></div>'
-    +'<div class="kpi"><div class="k">Total Rs</div><div class="v">'+fmt(p.total,0)+'</div></div></div>'
-    +'<h3 class="block">What needs attention</h3>'
+    +'<div class="sectionline"><h3 class="block">Portfolio</h3><span>'+(hasPrivatePortfolio?"Private account":"Available after sign-in")+'</span></div>'
+    +'<div class="kpis"><div class="kpi"><div class="k">Positions</div><div class="v">'+(hasPrivatePortfolio?p.rows.length:"—")+'</div></div>'
+    +'<div class="kpi"><div class="k">Invested Rs</div><div class="v">'+(hasPrivatePortfolio?fmt(p.invested,0):"—")+'</div></div>'
+    +'<div class="kpi"><div class="k">Cash Rs</div><div class="v">'+(hasPrivatePortfolio?fmt(p.cash,0):"—")+'</div></div>'
+    +'<div class="kpi"><div class="k">Total Rs</div><div class="v">'+(hasPrivatePortfolio?fmt(p.total,0):"—")+'</div></div></div>'
+    +'<div class="sectionline"><h3 class="block">What needs attention</h3><span>Highest-priority maintenance</span></div>'
     +(q.length? q.map(x=>'<div class="queue '+x.sev+'"><strong>'+esc(x.what)+'</strong><span class="why">'+esc(x.why)+'</span><span class="act">'+esc(x.act)+'</span></div>').join("")
       : '<p class="empty">Nothing overdue.</p>');
 }
-
 function macroHTML(){
   const m=state.macro;
   const fields = MACRO_FIELDS.map(f=>'<div class="field"><label for="m_'+f[0]+'">'+esc(f[1])+'</label>'
