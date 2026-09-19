@@ -58,9 +58,7 @@ function dashHTML(){
 
   const factPills=[
     ["Universe",(master.companies||[]).length||"—"],
-    ["Sectors",(master.sectors||[]).length||"—"],
-    ["Financial rows",(live.financials||[]).length||"—"],
-    ["Verified sources",verifiedDocs||"—"]
+    ["Sectors",(master.sectors||[]).length||"—"]
   ].map(x=>'<span class="factpill"><b>'+fmtSmart(x[1])+'</b>'+esc(x[0])+'</span>').join("");
 
   const strip = SECTORS.map(s=>{
@@ -975,9 +973,7 @@ function fullDailyDeskResultHTML(live,master,events,macro){
   const summaryCards=[
     ["PSX universe",companies.length,"companies"],
     ["Financial coverage",covered.length,companies.length+" companies in universe"],
-    ["Financial rows",financials.length,"structured records"],
     ["Research events",events.length,highEvents.length+" high materiality"],
-    ["Verified sources",verifiedSources,"source documents"],
     ["Valuation records",valuations.length,valuations.length?"stored models":"not populated yet"]
   ].map(x=>'<div class="deskstat"><span>'+esc(x[0])+'</span><strong>'+fmtSmart(x[1])+'</strong><small>'+esc(x[2])+'</small></div>').join("");
 
