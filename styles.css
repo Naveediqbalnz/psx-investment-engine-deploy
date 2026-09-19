@@ -620,3 +620,13 @@ input:focus,select:focus,textarea:focus{
 .macroimpactgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:10px}.macroimpactgrid>div{background:var(--sunken);border:1px solid var(--rule);border-radius:7px;padding:8px}.macroimpactgrid b{display:block;color:var(--ink-3);font-size:9px;text-transform:uppercase;margin-bottom:3px}.macroimpactgrid span{display:block;color:var(--ink-2);font-size:11px;line-height:1.45}
 @media(max-width:1100px){.macrokpis{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.macrokpis{grid-template-columns:repeat(2,1fr)}.macrotransgrid,.macroimpactgrid{grid-template-columns:1fr}}
+
+
+/* ===== sector scan run result ===== */
+.sectorscangrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}
+.sectorscancard{background:var(--surface);border:1px solid var(--rule-strong);border-radius:11px;padding:13px 14px;box-shadow:var(--shadow-sm)}
+.sectorscancard.active{border-left:3px solid var(--accent)}
+.sectorcardtop{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}.sectorcardtop span{display:block;color:var(--accent);font-size:9px;font-weight:600;letter-spacing:.06em}.sectorcardtop h4{margin:3px 0 0;font-size:15px}.sectorcardtop b{color:var(--ink-3);font-size:10px;font-weight:500;white-space:nowrap}
+.sectorscancard dl{display:grid;grid-template-columns:125px 1fr;gap:6px 10px;margin:12px 0 0;padding-top:10px;border-top:1px solid var(--rule);font-size:11.5px}.sectorscancard dt{color:var(--ink-3)}.sectorscancard dd{margin:0;color:var(--ink-2)}
+.sectorcovergrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}.sectorcoverage{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;background:var(--surface);border:1px solid var(--rule-strong);border-radius:9px;padding:11px 12px}.sectorcoverage strong{display:block;font-size:12px}.sectorcoverage small{display:block;color:var(--ink-3);font-size:10px;margin-top:2px}.sectorcoverage>span{font-size:12px;font-weight:600;color:var(--ink)}.sectorcoverage progress{grid-column:1 / -1;width:100%;height:6px;accent-color:var(--accent)}
+@media(max-width:850px){.sectorscangrid,.sectorcovergrid{grid-template-columns:1fr}.sectorscancard dl{grid-template-columns:1fr}}
