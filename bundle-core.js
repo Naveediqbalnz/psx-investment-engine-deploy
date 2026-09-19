@@ -290,8 +290,9 @@ function bindMasterData(){}
 /* ===================== live Supabase research adapter ===================== */
 function initLiveState(){
   if(!state.live){
-    state.live={macro:[],financials:[],ratios:[],prices:[],valuations:[],portfolio:[],events:[],queue:[],sourceDocuments:[],coverage:[],errors:[]};
+    state.live={macro:[],financials:[],ratios:[],bankMetrics:[],prices:[],valuations:[],portfolio:[],events:[],queue:[],sourceDocuments:[],coverage:[],errors:[]};
   }
+  state.live.bankMetrics=state.live.bankMetrics||[];
   return state.live;
 }
 async function liveRead(table, select="*", orderColumn=null, ascending=true){
@@ -413,10 +414,11 @@ function mapEventsIntoLegacy(){
 async function loadLiveResearchData(){
   const live=initLiveState();
   live.errors=[];
-  const [macro,financials,ratios,prices,valuations,portfolio,events,queue,sourceDocuments,coverage]=await Promise.all([
+  const [macro,financials,ratios,bankMetrics,prices,valuations,portfolio,events,queue,sourceDocuments,coverage]=await Promise.all([
     liveRead("macro_indicators","*","id",true),
     liveRead("company_financials","*","period_end",false),
     liveRead("company_ratios","*","as_of",false),
+    liveRead("bank_metrics","*","as_of",false),
     liveRead("market_prices","*","price_date",false),
     liveRead("valuations","*","as_of",false),
     liveRead("portfolio_holdings","*","ticker",true),
@@ -425,7 +427,7 @@ async function loadLiveResearchData(){
     liveRead("source_documents","*","retrieved_at",false),
     liveRead("company_data_coverage","*","ticker",true)
   ]);
-  Object.assign(live,{macro,financials,ratios,prices,valuations,portfolio,events,queue,sourceDocuments,coverage});
+  Object.assign(live,{macro,financials,ratios,bankMetrics,prices,valuations,portfolio,events,queue,sourceDocuments,coverage});
   mapMacroIntoLegacy();
   mapSectorsIntoLegacy();
   mapCompaniesIntoLegacy();
