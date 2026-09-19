@@ -1500,9 +1500,6 @@ function tradingKseSnapshot(){
 function tradingChartModeLabel(mode){
   return ({price:"Price",volume:"Volume",returns:"Returns",relative:"Relative Strength",trading:"Trading Chart"})[mode]||"Price";
 }
-function tradingViewRange(range){
-  return ({"1D":"1D","1W":"5D","1M":"1M","3M":"3M","6M":"6M","YTD":"YTD","1Y":"12M","3Y":"36M","5Y":"60M","All":"ALL"})[range]||"1M";
-}
 function tradingChartInstruments(){
   const seen=new Set();
   const companies=(initMasterState().companies||[]).filter(c=>{
@@ -1524,48 +1521,42 @@ function tradingSelectedInstrument(){
   const selected=cleanTicker(route.tradeTicker||"MEBL");
   return instruments.find(x=>x.ticker===selected)||instruments.find(x=>x.ticker==="MEBL")||instruments[0];
 }
-function tradingViewChartURL(mode,range,ticker){
-  const theme=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
-  const candle=mode==="trading"||mode==="volume";
-  const studies=(mode==="volume"||mode==="trading")?["Volume@tv-basicstudies"]:[];
-  const params=new URLSearchParams({
-    symbol:"PSX:"+(cleanTicker(ticker)||"MEBL"),
-    interval:range==="1D"?"15":"D",
-    range:tradingViewRange(range),
-    timezone:"Asia/Karachi",
-    theme,
-    style:candle?"1":"2",
-    locale:"en",
-    toolbarbg:theme==="dark"?"#151d2b":"#ffffff",
-    withdateranges:"1",
-    hideideas:"1",
-    saveimage:"0",
-    symboledit:"0",
-    studies:JSON.stringify(studies),
-    utm_source:location.hostname||"psx-desk",
-    utm_medium:"widget",
-    utm_campaign:"chart"
-  });
-  return "https://s.tradingview.com/widgetembed/?"+params.toString();
+function tradingPriceRows(ticker){
+  const selected=cleanTicker(ticker);
+  return (initLiveState().prices||[]).filter(r=>cleanTicker(r.ticker)===selected&&num(r.close)!==null)
+    .slice().sort((a,b)=>String(a.price_date||"").localeCompare(String(b.price_date||"")));
+}
+function tradingSnapshotCanvas(row,mode,ticker){
+  if(!row) return '<div class="chartgridlines">'+"<i></i>".repeat(5)+'</div><div class="chartnodata"><div class="chartnodataicon">↗</div><strong>No verified price snapshot for '+esc(ticker)+'</strong><p>The portal will not substitute another company\'s chart.</p></div>';
+  const open=num(row.open), high=num(row.high), low=num(row.low), close=num(row.close), volume=num(row.volume);
+  if(mode==="returns"||mode==="relative") return '<div class="chartgridlines">'+"<i></i>".repeat(5)+'</div><div class="chartnodata"><div class="chartnodataicon">↗</div><strong>Historical '+esc(tradingChartModeLabel(mode).toLowerCase())+' is not available</strong><p>'+esc(ticker)+' currently has one verified trading-day snapshot. At least two dated observations are required for this view.</p><span>Nothing is interpolated or replaced with another ticker.</span></div>';
+  if(mode==="volume") return '<div class="snapshotchart"><div class="snapshotbar" aria-label="Verified volume '+esc(fmtSmart(volume))+' shares"><span></span></div><strong>'+fmtSmart(volume)+' shares</strong><small>Verified volume on '+fmtDate(row.price_date)+'</small></div>';
+  const top=high===null?Math.max(open||0,close||0):high, bottom=low===null?Math.min(open||0,close||0):low;
+  const up=open!==null&&close!==null&&close>=open;
+  return '<div class="snapshotchart"><svg class="snapshotcandle" viewBox="0 0 240 250" role="img" aria-label="'+esc(ticker)+' verified OHLC snapshot">'
+    +'<line x1="120" y1="25" x2="120" y2="225" class="candlewick '+(up?'up':'down')+'"></line>'
+    +'<rect x="88" y="78" width="64" height="96" rx="5" class="candlebody '+(up?'up':'down')+'"></rect>'
+    +'<text x="162" y="32">H '+fmtSmart(top,2)+'</text><text x="162" y="222">L '+fmtSmart(bottom,2)+'</text>'
+    +'<text x="18" y="92">O '+fmtSmart(open,2)+'</text><text x="18" y="168">C '+fmtSmart(close,2)+'</text></svg>'
+    +'<strong>Verified daily snapshot</strong><small>'+fmtDate(row.price_date)+' · one observation, not a historical series</small></div>';
 }
 function tradingChartHTML(){
   const kse=tradingKseSnapshot();
   const instruments=tradingChartInstruments();
   const instrument=tradingSelectedInstrument();
   const isIndex=instrument.ticker==="KSE100";
-  const company=instrument.record||{};
+  const company=instrument.record||{}, priceRows=tradingPriceRows(instrument.ticker), latestPrice=priceRows[priceRows.length-1]||null;
   const modes=[["price","Price"],["volume","Volume"],["returns","Returns"],["relative","Relative Strength"],["trading","Trading Chart"]];
   const ranges=["1D","1W","1M","3M","6M","YTD","1Y","3Y","5Y","All"];
-  const latestValue=isIndex?kse.value:num(company.last_price);
-  const latestDate=isIndex?(kse.eventDate||kse.period):(company.price_date||"");
-  const source=isIndex?kse.source:(company.price_source||company.universe_source||"Pakistan Stock Exchange Data Portal");
+  const latestValue=isIndex?kse.value:(latestPrice?num(latestPrice.close):num(company.last_price));
+  const latestDate=isIndex?(kse.eventDate||kse.period):(latestPrice?latestPrice.price_date:(company.price_date||""));
+  const source=isIndex?kse.source:((latestPrice&&latestPrice.source_name)||company.price_source||company.universe_source||"Pakistan Stock Exchange Data Portal");
   const pctMove=isIndex?kse.pctMove:null, points=isIndex?kse.points:null;
   const moveClass=pctMove===null||pctMove===0?"neutral":pctMove>0?"up":"down";
   const moveText=pctMove===null?"—":(pctMove>0?"+":"")+fmt(pctMove,2)+"%";
   const pointsText=points===null?"—":(points>0?"+":"")+fmt(points,2)+(isIndex?" pts":"");
   const mode=route.tradeChartMode||"price", range=route.tradeRange||"1M";
-  const chartNote=mode==="returns"?'<div class="chartcontext">Use the chart percentage scale to inspect returns for the selected period.</div>':mode==="relative"?'<div class="chartcontext">Use Compare in the chart toolbar to measure '+esc(instrument.label)+' against another stock or index.</div>':"";
-  const chartUrl=tradingViewChartURL(mode,range,instrument.ticker);
+  const chartNote=mode==="returns"?'<div class="chartcontext">Returns will populate after a second verified closing price is stored.</div>':mode==="relative"?'<div class="chartcontext">Relative strength for '+esc(instrument.label)+' requires dated stock and benchmark histories.</div>':"";
   const options=instruments.map(x=>'<option value="'+esc(x.ticker)+'" '+(x.ticker===instrument.ticker?'selected':'')+'>'+esc(x.label+(x.name?' — '+x.name:''))+'</option>').join("");
   return '<section class="marketterminal">'
     +'<div class="chartpickerbar"><label for="tradeTickerSelect"><span>Chart ticker</span><select id="tradeTickerSelect" aria-label="Choose PSX stock">'+options+'</select></label><small>'+fmtSmart(instruments.length)+' PSX companies available</small></div>'
@@ -1574,14 +1565,12 @@ function tradingChartHTML(){
       +'<div class="marketmove '+moveClass+'"><strong>'+moveText+'</strong><span>'+pointsText+'</span><small>'+fmtDate(latestDate)+'</small></div></div>'
       +'<div class="marketterminal-meta"><div><span>Selected view</span><strong>'+esc(tradingChartModeLabel(mode))+'</strong></div>'
       +'<div><span>Range</span><strong>'+esc(range)+'</strong></div>'
-      +'<div><span>Historical feed</span><strong class="connectedtext">Connected</strong></div></div></div>'
+      +'<div><span>Stored observations</span><strong class="missingtext">'+fmtSmart(priceRows.length)+' snapshot'+(priceRows.length===1?'':'s')+'</strong></div></div></div>'
     +'<div class="charttoolbar"><div class="chartmodes">'+modes.map(x=>'<button type="button" class="chartmodebtn" data-trade-chart-mode="'+x[0]+'" aria-current="'+(mode===x[0])+'">'+x[1]+'</button>').join("")+'</div>'
       +'<div class="chartranges">'+ranges.map(x=>'<button type="button" class="chartrangebtn" data-trade-range="'+x+'" aria-current="'+(range===x)+'">'+x+'</button>').join("")+'</div></div>'
     +chartNote
-    +'<div class="chartcanvas chartconnected">'
-      +'<iframe class="tradingviewframe" src="'+esc(chartUrl)+'" title="'+esc(instrument.label)+' '+esc(tradingChartModeLabel(mode))+' chart" loading="lazy" allowtransparency="true" scrolling="no"></iframe>'
-    +'</div>'
-    +'<div class="chartfooter"><span>Snapshot source: '+esc(source||"Pakistan Stock Exchange Data Portal")+'</span><span>Interactive history: TradingView · PSX:'+esc(instrument.ticker)+'</span><span>Chart status: CONNECTED</span></div>'
+    +'<div class="chartcanvas chartsnapshot">'+tradingSnapshotCanvas(latestPrice,mode,instrument.ticker)+'</div>'
+    +'<div class="chartfooter"><span>Snapshot source: '+esc(source||"Pakistan Stock Exchange Data Portal")+'</span><a href="https://dps.psx.com.pk/company/'+encodeURIComponent(instrument.ticker)+'" target="_blank" rel="noopener noreferrer">Open '+esc(instrument.ticker)+' on PSX ↗</a><span>History status: '+(priceRows.length>1?'AVAILABLE':'ONE VERIFIED DATE')+'</span></div>'
   +'</section>';
 }
 function tradingMarketPanels(){
@@ -1608,8 +1597,8 @@ function tradingDashHTML(){
       +(snapshotRows||'<tr><td class="pad empty" colspan="6">No price snapshots available.</td></tr>')+'</tbody></table></div>'
     +'<div class="sectionline"><h3 class="block">Latest catalysts</h3><span>Research events, not technical signals</span></div>'
     +(latestEvents||'<p class="empty">No research events available.</p>')
-    +'<div class="sectionline"><h3 class="block">Data limits</h3><span>Connected chart vs. stored research data</span></div>'
-    +'<div class="queue"><strong>PSX interactive history</strong><span class="why">Connected through the TradingView widget above. The portal does not copy or fabricate the underlying series.</span><span class="act">Live chart</span></div>'
+    +'<div class="sectionline"><h3 class="block">Data limits</h3><span>Stored research data</span></div>'
+    +'<div class="queue"><strong>PSX historical prices</strong><span class="why">The portal currently stores one verified date per ticker. It shows that genuine snapshot and never substitutes another company\'s chart.</span><span class="act">History needed</span></div>'
     +'<div class="queue"><strong>Market breadth & contributors</strong><span class="why">Required for breadth, sector leadership and index-contribution panels.</span><span class="act">Data</span></div>';
 }
 function tradingScannerHTML(){

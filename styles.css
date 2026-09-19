@@ -705,8 +705,12 @@ input:focus,select:focus,textarea:focus{
 .chartmodes,.chartranges{display:flex;gap:3px;flex-wrap:wrap}.chartmodebtn,.chartrangebtn{border:1px solid transparent;background:transparent;color:var(--ink-3);font:inherit;font-size:10.5px;font-weight:500;padding:5px 8px;border-radius:6px;cursor:pointer}
 .chartmodebtn:hover,.chartrangebtn:hover{color:var(--ink);background:var(--sunken)}.chartmodebtn[aria-current="true"],.chartrangebtn[aria-current="true"]{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 38%,var(--rule))}
 .chartcanvas{position:relative;height:360px;background:var(--surface);overflow:hidden}
-.chartcanvas.chartconnected{height:520px;background:#151d2b}
-.tradingviewframe{display:block;width:100%;height:100%;border:0;background:#151d2b}
+.chartcanvas.chartsnapshot{height:420px;background:var(--surface)}
+.snapshotchart{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;padding:28px;text-align:center;background:repeating-linear-gradient(to bottom,transparent 0,transparent 82px,var(--rule) 83px)}
+.snapshotchart strong{font-size:14px;margin-top:8px}.snapshotchart small{color:var(--ink-3);font-size:10.5px;margin-top:4px}
+.snapshotcandle{width:240px;height:250px;overflow:visible}.snapshotcandle text{fill:var(--ink-2);font:11px ui-monospace,SFMono-Regular,Menlo,monospace}.candlewick{stroke-width:4}.candlebody{stroke-width:3}.candlewick.up,.candlebody.up{stroke:var(--market-up)}.candlebody.up{fill:var(--market-up-soft)}.candlewick.down,.candlebody.down{stroke:var(--market-down)}.candlebody.down{fill:var(--market-down-soft)}
+.snapshotbar{width:90px;height:230px;border-bottom:2px solid var(--rule-strong);display:flex;align-items:flex-end}.snapshotbar span{display:block;width:100%;height:72%;border-radius:6px 6px 0 0;background:var(--accent)}
+.chartfooter a{color:var(--accent);text-decoration:none}.chartfooter a:hover{text-decoration:underline}
 .chartcontext{padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--sunken);color:var(--ink-2);font-size:10.5px}
 .chartgridlines{position:absolute;inset:20px 16px 28px 46px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
 .chartgridlines i{display:block;border-top:1px solid var(--rule);opacity:.75}
@@ -717,7 +721,7 @@ input:focus,select:focus,textarea:focus{
 .chartfooter{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--rule);background:var(--sunken);color:var(--ink-3);font-size:9.5px}
 .trademarketgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.trademarketcard{background:var(--surface);border:1px solid var(--rule-strong);border-radius:9px;padding:11px 12px}.trademarketcard span{display:block;color:var(--ink-3);font-size:9px;text-transform:uppercase;letter-spacing:.05em}.trademarketcard strong{display:block;font-size:18px;margin:4px 0 2px}.trademarketcard p{color:var(--ink-3);font-size:10.5px;margin:0;line-height:1.45}
 @media(max-width:1000px){.marketterminal-head{flex-direction:column}.marketterminal-meta{min-width:0;width:100%}.charttoolbar{align-items:flex-start;flex-direction:column}.trademarketgrid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px){.marketterminal-meta{grid-template-columns:1fr}.marketlevel{font-size:29px}.chartpickerbar{align-items:stretch;flex-direction:column;gap:6px}.chartpickerbar small{padding-bottom:0}.chartcanvas{height:300px}.chartcanvas.chartconnected{height:430px}.trademarketgrid{grid-template-columns:1fr}}
+@media(max-width:650px){.marketterminal-meta{grid-template-columns:1fr}.marketlevel{font-size:29px}.chartpickerbar{align-items:stretch;flex-direction:column;gap:6px}.chartpickerbar small{padding-bottom:0}.chartcanvas{height:300px}.chartcanvas.chartsnapshot{height:360px}.trademarketgrid{grid-template-columns:1fr}}
 
 
 /* ===== live research-news ticker ===== */
