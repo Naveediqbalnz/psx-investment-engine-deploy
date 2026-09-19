@@ -288,3 +288,28 @@ tbody tr:hover td{background:color-mix(in srgb,var(--accent-soft) 48%,transparen
 .impactrow strong{display:block;font-size:11.5px;margin-bottom:3px}.impactrow span{display:block;font-size:12px;color:var(--ink-2);line-height:1.45}
 @media(max-width:980px){.analysisstats{grid-template-columns:repeat(2,1fr)}.analysisgrid{grid-template-columns:1fr}}
 @media(max-width:700px){.factinterpret{grid-template-columns:1fr}.factinterpret>div+div{border-left:0;border-top:1px solid var(--rule)}.analysisstats{grid-template-columns:1fr 1fr}}
+
+
+/* ===== sector-aware bank company page ===== */
+.companyhero{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;margin:4px 0 18px;padding-bottom:18px;border-bottom:1px solid var(--rule)}
+.companytitle{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.companytitle h2{margin:0}
+.tagrow{display:flex;gap:6px;flex-wrap:wrap}.tagrow span{font-size:10px;text-transform:uppercase;letter-spacing:.045em;color:var(--ink-2);background:var(--sunken);border:1px solid var(--rule);border-radius:999px;padding:3px 8px}
+.companyquote{background:var(--surface);border:1px solid var(--rule);border-radius:10px;box-shadow:var(--shadow-sm);padding:13px 16px;min-width:175px;text-align:right}
+.companyquote span,.companyquote small{display:block;color:var(--ink-3);font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.companyquote strong{display:block;font-family:var(--serif);font-size:27px;font-weight:500;line-height:1.2;margin:3px 0}
+.bank-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:18px}.bank-kpis.four{grid-template-columns:repeat(4,1fr)}
+.kpi .smallv{font-size:18px}
+.companytabs{display:flex;gap:3px;overflow-x:auto;border-bottom:1px solid var(--rule);margin:2px 0 20px;scrollbar-width:none}.companytabs::-webkit-scrollbar{display:none}
+.companytab{font:inherit;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-2);padding:9px 12px;cursor:pointer;white-space:nowrap;font-size:12.5px}
+.companytab:hover{color:var(--ink)}.companytab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.bank-overview-grid{align-items:stretch}.researchdl{margin:9px 0 0}.researchdl dt{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);font-weight:600;margin-top:10px}.researchdl dd{margin:3px 0 0;color:var(--ink-2);font-size:12.5px}
+.bankbars{display:flex;flex-direction:column;gap:10px;margin-top:12px}.bankbarrow{display:grid;grid-template-columns:44px 1fr 90px;gap:9px;align-items:center;font-size:11px}.bankbarrow>span{color:var(--ink-3)}.bankbarrow strong{text-align:right;font-weight:500}
+.bankbartrack{height:9px;background:var(--sunken);border-radius:99px;overflow:hidden}.bankbartrack i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.gapgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:11px}.gaprow{display:grid;grid-template-columns:9px 1fr auto;gap:9px;align-items:center;background:var(--surface);border:1px solid var(--rule);border-radius:9px;padding:11px 12px;box-shadow:var(--shadow-sm)}
+.gapdot{width:8px;height:8px;border-radius:50%;background:var(--rule-strong)}.gapdot.ok{background:var(--accent)}.gapdot.missing{background:var(--warn)}
+.gaprow strong{display:block;font-size:12px}.gaprow small{display:block;font-size:10.5px;color:var(--ink-3);margin-top:2px}.gaprow>b{font-size:9px;letter-spacing:.05em;color:var(--ink-3)}
+.noticebox{display:flex;gap:10px;align-items:flex-start;background:var(--warn-soft);border:1px solid color-mix(in srgb,var(--warn) 32%,var(--rule));border-radius:9px;padding:12px 14px;margin:12px 0;color:var(--warn)}
+.noticebox strong{white-space:nowrap;font-size:12px}.noticebox span{font-size:12px;color:var(--ink-2)}
+.valuationhero{display:flex;justify-content:space-between;gap:20px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow-sm)}.valuationhero h3{font-family:var(--serif);font-size:20px;font-weight:500;margin:4px 0 5px}.valuationhero p{font-size:12.5px;color:var(--ink-2);margin:0;max-width:72ch}.valuationstatus{display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:150px}.valuationstatus span{font-size:10.5px;color:var(--ink-3)}
+@media(max-width:1100px){.bank-kpis{grid-template-columns:repeat(3,1fr)}.bank-kpis.four{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:780px){.companyhero{flex-direction:column}.companyquote{width:100%;text-align:left}.bank-kpis,.bank-kpis.four{grid-template-columns:repeat(2,1fr)}.gapgrid{grid-template-columns:1fr}.bankbarrow{grid-template-columns:38px 1fr 78px}.valuationhero{flex-direction:column}.valuationstatus{align-items:flex-start}}
