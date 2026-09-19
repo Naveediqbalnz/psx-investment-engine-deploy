@@ -21,10 +21,10 @@ function dashHTML(){
     ["Sectors",master.sectors.length||"—"],
     ["Financial rows",(live.financials||[]).length||"—"],
     ["Verified sources",verifiedDocs||"—"]
-  ].map(x=>'<span class="factpill"><b>'+esc(x[1])+'</b>'+esc(x[0])+'</span>').join("");
+  ].map(x=>'<span class="factpill"><b>'+fmtSmart(x[1])+'</b>'+esc(x[0])+'</span>').join("");
   const kpis = [["kse","KSE-100"],["rate","Policy rate %"],["cpi","CPI YoY %"],["pkr","PKR/USD"]]
     .map(f=>'<div class="kpi"><div class="k">'+esc(f[1])+'</div><div class="v'+(m[f[0]]?"":" na")+'">'
-      +esc(m[f[0]]||"—")+'</div></div>').join("");
+      +fmtSmart(m[f[0]])+'</div></div>').join("");
   const strip = SECTORS.map(s=>{
     const d=daysSince(state.sectors[s.id].updatedAt);
     return '<button data-nav="sector" data-id="'+s.id+'" class="'+ageClass(d)+'"><span class="nm">'+esc(s.short)+'</span>'
@@ -164,7 +164,7 @@ function companiesHTML(){
       +"<td class='pad'>"+esc(c.coverage||"—")+"</td>"
       +"<td class='pad'>"+verificationBadge(c.dataCoverage&&c.dataCoverage.verification_status)+"</td>"
       +"<td class='pad'>"+coverageSummary(c.dataCoverage)+"</td>"
-      +"<td class='pad num'>"+esc(c.price||"—")+"</td>"
+      +"<td class='pad num'>"+fmtSmart(c.price,2)+"</td>"
       +"<td class='pad'>"+esc((c.thesis||"").slice(0,70)||"—")+"</td><td class='pad num'>"+(d===null?"—":d+"d")+"</td></tr>";
   }).join("");
   return '<h2 class="section">Company research</h2>'
@@ -193,12 +193,12 @@ function companyHTML(t){
       : esc(r.source_name||"—");
     return '<tr>'
       +'<td class="pad num">'+esc(r.year||"—")+'</td>'
-      +'<td class="pad num">'+esc(r.rev||"—")+'</td>'
-      +'<td class="pad num">'+esc(r.pat||"—")+'</td>'
-      +'<td class="pad num">'+esc(r.eps||"—")+'</td>'
-      +'<td class="pad num">'+esc(r.roe||"—")+'</td>'
-      +'<td class="pad num">'+esc(r.dps||"—")+'</td>'
-      +'<td class="pad num">'+esc(r.de||"—")+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.rev,2)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.pat,2)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.eps,4)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.roe,4)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.dps,4)+'</td>'
+      +'<td class="pad num">'+fmtSmart(r.de,4)+'</td>'
       +'<td class="pad">'+verificationBadge(r.verification_status||"PROVISIONAL")+'</td>'
       +'<td class="pad">'+src+(r.source_page?' · p. '+esc(r.source_page):'')+'</td></tr>';
   }).join("");
@@ -208,15 +208,15 @@ function companyHTML(t){
     +'<div class="inline" style="margin:14px 0 18px">'
       +'<div class="field"><label>Coverage</label><input type="text" value="'+esc(c.coverage||"—")+'" disabled></div>'
       +'<div class="field"><label>Master sector</label><input type="text" value="'+esc(masterSector)+'" disabled></div>'
-      +'<div class="field"><label>Price Rs</label><input type="text" value="'+esc(c.price||"")+'" disabled></div>'
-      +'<div class="field"><label>Shares mn</label><input type="text" value="'+esc(c.shares||"")+'" disabled></div>'
+      +'<div class="field"><label>Price Rs</label><input type="text" value="'+fmtSmart(c.price,2)+'" disabled></div>'
+      +'<div class="field"><label>Shares mn</label><input type="text" value="'+fmtSmart(c.shares,4)+'" disabled></div>'
       +'<div class="field"><label>Data verification</label><div style="padding-top:7px">'+verificationBadge(dc&&dc.verification_status)+'</div></div>'
     +'</div>'
     +'<div class="kpis">'
-      +'<div class="kpi"><div class="k">Financial rows</div><div class="v">'+(dc?esc(dc.financial_rows):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Ratio rows</div><div class="v">'+(dc?esc(dc.ratio_rows):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Price rows</div><div class="v">'+(dc?esc(dc.price_rows):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Valuation rows</div><div class="v">'+(dc?esc(dc.valuation_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Financial rows</div><div class="v">'+(dc?fmtSmart(dc.financial_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Ratio rows</div><div class="v">'+(dc?fmtSmart(dc.ratio_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Price rows</div><div class="v">'+(dc?fmtSmart(dc.price_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Valuation rows</div><div class="v">'+(dc?fmtSmart(dc.valuation_rows):"—")+'</div></div>'
     +'</div>'
     +'<h3 class="block">Financial history</h3>'
     +'<p class="hint">Live structured financial data. Missing values display as — and are not estimated.</p>'
