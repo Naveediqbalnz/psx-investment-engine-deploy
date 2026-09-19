@@ -15,7 +15,7 @@ try{
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=auth-recovery-fix-20260919"></script>
-<link rel="stylesheet" href="styles.css?v=live-news-ticker-20260919">
+<link rel="stylesheet" href="styles.css?v=topbar-layout-20260919">
 <style>[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -110,11 +110,13 @@ try{
         <div class="searchresults" id="globalSearchResults" hidden></div>
       </div>
       <span class="status" id="status">Loading</span>
-      <button class="btn small" id="themeBtn">Dark mode</button>
-      <button class="btn small" id="exportBtn" hidden>Export</button>
-      <button class="btn small" id="importBtn">Import</button>
+      <div class="top-actions" aria-label="Portal actions">
+        <button class="btn small" id="themeBtn">Dark mode</button>
+        <button class="btn small" id="exportBtn" hidden>Export</button>
+        <button class="btn small" id="importBtn">Import</button>
+        <button class="btn small" id="signOut">Sign out</button>
+      </div>
       <input type="file" id="importFile" accept="application/json" hidden>
-      <button class="btn small" id="signOut">Sign out</button>
     </div>
     <div class="cmd" id="cmd" hidden>
       <div class="cmdrow">
