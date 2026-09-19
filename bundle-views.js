@@ -1500,6 +1500,9 @@ function tradingKseSnapshot(){
 function tradingChartModeLabel(mode){
   return ({price:"Price",volume:"Volume",returns:"Returns",relative:"Relative Strength",trading:"Trading Chart"})[mode]||"Price";
 }
+function tradingViewRange(range){
+  return ({"1D":"1D","1W":"5D","1M":"1M","3M":"3M","6M":"6M","YTD":"YTD","1Y":"12M","3Y":"36M","5Y":"60M","All":"ALL"})[range]||"1M";
+}
 function tradingChartInstruments(){
   const seen=new Set();
   const companies=(initMasterState().companies||[]).filter(c=>{
@@ -1521,12 +1524,38 @@ function tradingSelectedInstrument(){
   const selected=cleanTicker(route.tradeTicker||"MEBL");
   return instruments.find(x=>x.ticker===selected)||instruments.find(x=>x.ticker==="MEBL")||instruments[0];
 }
+function tradingViewChartURL(mode,range,ticker){
+  const theme=document.documentElement.getAttribute("data-theme")==="dark"?"dark":"light";
+  const candle=mode==="trading"||mode==="volume";
+  const studies=(mode==="volume"||mode==="trading")?["Volume@tv-basicstudies"]:[];
+  const params=new URLSearchParams({
+    symbol:"PSX:"+(cleanTicker(ticker)||"MEBL"),
+    interval:range==="1D"?"15":"D",
+    range:tradingViewRange(range),
+    timezone:"Asia/Karachi",
+    theme,
+    style:candle?"1":"2",
+    locale:"en",
+    toolbarbg:theme==="dark"?"#151d2b":"#ffffff",
+    withdateranges:"1",
+    hideideas:"1",
+    saveimage:"0",
+    symboledit:"0",
+    studies:JSON.stringify(studies),
+    utm_source:location.hostname||"psx-desk",
+    utm_medium:"widget",
+    utm_campaign:"chart"
+  });
+  return "https://s.tradingview.com/widgetembed/?"+params.toString();
+}
 function tradingChartHTML(){
   const kse=tradingKseSnapshot();
   const instruments=tradingChartInstruments();
   const instrument=tradingSelectedInstrument();
   const isIndex=instrument.ticker==="KSE100";
   const company=instrument.record||{};
+  const modes=[["price","Price"],["volume","Volume"],["returns","Returns"],["relative","Relative Strength"],["trading","Trading Chart"]];
+  const ranges=["1D","1W","1M","3M","6M","YTD","1Y","3Y","5Y","All"];
   const latestValue=isIndex?kse.value:num(company.last_price);
   const latestDate=isIndex?(kse.eventDate||kse.period):(company.price_date||"");
   const source=isIndex?kse.source:(company.price_source||company.universe_source||"Pakistan Stock Exchange Data Portal");
@@ -1534,22 +1563,25 @@ function tradingChartHTML(){
   const moveClass=pctMove===null||pctMove===0?"neutral":pctMove>0?"up":"down";
   const moveText=pctMove===null?"—":(pctMove>0?"+":"")+fmt(pctMove,2)+"%";
   const pointsText=points===null?"—":(points>0?"+":"")+fmt(points,2)+(isIndex?" pts":"");
-  const officialChartUrl="https://dps.psx.com.pk/company/"+encodeURIComponent(instrument.ticker)+"#quote";
+  const mode=route.tradeChartMode||"price", range=route.tradeRange||"1M";
+  const chartNote=mode==="returns"?'<div class="chartcontext">Use the chart percentage scale to inspect returns for the selected period.</div>':mode==="relative"?'<div class="chartcontext">Use Compare in the chart toolbar to measure '+esc(instrument.label)+' against another stock or index.</div>':"";
+  const chartUrl=tradingViewChartURL(mode,range,instrument.ticker);
   const options=instruments.map(x=>'<option value="'+esc(x.ticker)+'" '+(x.ticker===instrument.ticker?'selected':'')+'>'+esc(x.label+(x.name?' — '+x.name:''))+'</option>').join("");
   return '<section class="marketterminal">'
     +'<div class="chartpickerbar"><label for="tradeTickerSelect"><span>Chart ticker</span><select id="tradeTickerSelect" aria-label="Choose PSX stock">'+options+'</select></label><small>'+fmtSmart(instruments.length)+' PSX companies available</small></div>'
     +'<div class="marketterminal-head"><div class="marketidentity"><div class="marketindexrow"><span class="indexbadge">'+esc(instrument.label)+'</span><span class="officialtag">'+(isIndex?'Official PSX snapshot':esc(instrument.name||"PSX company"))+'</span></div>'
       +'<div class="marketlevel">'+(latestValue===null?"—":fmt(latestValue,2))+'</div>'
       +'<div class="marketmove '+moveClass+'"><strong>'+moveText+'</strong><span>'+pointsText+'</span><small>'+fmtDate(latestDate)+'</small></div></div>'
-      +'<div class="marketterminal-meta"><div><span>Selected ticker</span><strong>'+esc(instrument.label)+'</strong></div>'
-      +'<div><span>Chart source</span><strong>Official PSX</strong></div>'
-      +'<div><span>Embedded chart</span><strong class="missingtext">Disabled</strong></div></div></div>'
-    +'<div class="chartcanvas chartexternal">'
-      +'<div class="chartnodata"><div class="chartnodataicon">↗</div><strong>Open the official PSX chart</strong>'
-      +'<p>The embedded chart was removed because its provider displays an unavoidable notification for PSX symbols.</p>'
-      +'<a class="btn chartofficialbtn" href="'+esc(officialChartUrl)+'" target="_blank" rel="noopener">View '+esc(instrument.label)+' chart on PSX</a></div>'
+      +'<div class="marketterminal-meta"><div><span>Selected view</span><strong>'+esc(tradingChartModeLabel(mode))+'</strong></div>'
+      +'<div><span>Range</span><strong>'+esc(range)+'</strong></div>'
+      +'<div><span>Historical feed</span><strong class="connectedtext">Connected</strong></div></div></div>'
+    +'<div class="charttoolbar"><div class="chartmodes">'+modes.map(x=>'<button type="button" class="chartmodebtn" data-trade-chart-mode="'+x[0]+'" aria-current="'+(mode===x[0])+'">'+x[1]+'</button>').join("")+'</div>'
+      +'<div class="chartranges">'+ranges.map(x=>'<button type="button" class="chartrangebtn" data-trade-range="'+x+'" aria-current="'+(range===x)+'">'+x+'</button>').join("")+'</div></div>'
+    +chartNote
+    +'<div class="chartcanvas chartconnected">'
+      +'<iframe class="tradingviewframe" src="'+esc(chartUrl)+'" title="'+esc(instrument.label)+' '+esc(tradingChartModeLabel(mode))+' chart" loading="lazy" allowtransparency="true" scrolling="no"></iframe>'
     +'</div>'
-    +'<div class="chartfooter"><span>Snapshot source: '+esc(source||"Pakistan Stock Exchange Data Portal")+'</span><span>Official symbol: '+esc(instrument.ticker)+'</span><span>Popup status: DISABLED</span></div>'
+    +'<div class="chartfooter"><span>Snapshot source: '+esc(source||"Pakistan Stock Exchange Data Portal")+'</span><span>Interactive history: TradingView · PSX:'+esc(instrument.ticker)+'</span><span>Chart status: CONNECTED</span></div>'
   +'</section>';
 }
 function tradingMarketPanels(){
@@ -1576,8 +1608,8 @@ function tradingDashHTML(){
       +(snapshotRows||'<tr><td class="pad empty" colspan="6">No price snapshots available.</td></tr>')+'</tbody></table></div>'
     +'<div class="sectionline"><h3 class="block">Latest catalysts</h3><span>Research events, not technical signals</span></div>'
     +(latestEvents||'<p class="empty">No research events available.</p>')
-    +'<div class="sectionline"><h3 class="block">Data limits</h3><span>Official chart vs. stored research data</span></div>'
-    +'<div class="queue"><strong>PSX price history</strong><span class="why">Open the official PSX chart above. The portal does not copy, fabricate or redistribute an unlicensed price series.</span><span class="act">Official source</span></div>'
+    +'<div class="sectionline"><h3 class="block">Data limits</h3><span>Connected chart vs. stored research data</span></div>'
+    +'<div class="queue"><strong>PSX interactive history</strong><span class="why">Connected through the TradingView widget above. The portal does not copy or fabricate the underlying series.</span><span class="act">Live chart</span></div>'
     +'<div class="queue"><strong>Market breadth & contributors</strong><span class="why">Required for breadth, sector leadership and index-contribution panels.</span><span class="act">Data</span></div>';
 }
 function tradingScannerHTML(){

@@ -705,8 +705,8 @@ input:focus,select:focus,textarea:focus{
 .chartmodes,.chartranges{display:flex;gap:3px;flex-wrap:wrap}.chartmodebtn,.chartrangebtn{border:1px solid transparent;background:transparent;color:var(--ink-3);font:inherit;font-size:10.5px;font-weight:500;padding:5px 8px;border-radius:6px;cursor:pointer}
 .chartmodebtn:hover,.chartrangebtn:hover{color:var(--ink);background:var(--sunken)}.chartmodebtn[aria-current="true"],.chartrangebtn[aria-current="true"]{color:var(--accent);background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 38%,var(--rule))}
 .chartcanvas{position:relative;height:360px;background:var(--surface);overflow:hidden}
-.chartcanvas.chartexternal{height:320px;background:var(--surface)}
-.chartofficialbtn{margin-top:14px;text-decoration:none}
+.chartcanvas.chartconnected{height:520px;background:#151d2b}
+.tradingviewframe{display:block;width:100%;height:100%;border:0;background:#151d2b}
 .chartcontext{padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--sunken);color:var(--ink-2);font-size:10.5px}
 .chartgridlines{position:absolute;inset:20px 16px 28px 46px;display:flex;flex-direction:column;justify-content:space-between;pointer-events:none}
 .chartgridlines i{display:block;border-top:1px solid var(--rule);opacity:.75}
@@ -717,7 +717,7 @@ input:focus,select:focus,textarea:focus{
 .chartfooter{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 14px;border-top:1px solid var(--rule);background:var(--sunken);color:var(--ink-3);font-size:9.5px}
 .trademarketgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.trademarketcard{background:var(--surface);border:1px solid var(--rule-strong);border-radius:9px;padding:11px 12px}.trademarketcard span{display:block;color:var(--ink-3);font-size:9px;text-transform:uppercase;letter-spacing:.05em}.trademarketcard strong{display:block;font-size:18px;margin:4px 0 2px}.trademarketcard p{color:var(--ink-3);font-size:10.5px;margin:0;line-height:1.45}
 @media(max-width:1000px){.marketterminal-head{flex-direction:column}.marketterminal-meta{min-width:0;width:100%}.charttoolbar{align-items:flex-start;flex-direction:column}.trademarketgrid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:650px){.marketterminal-meta{grid-template-columns:1fr}.marketlevel{font-size:29px}.chartpickerbar{align-items:stretch;flex-direction:column;gap:6px}.chartpickerbar small{padding-bottom:0}.chartcanvas{height:300px}.trademarketgrid{grid-template-columns:1fr}}
+@media(max-width:650px){.marketterminal-meta{grid-template-columns:1fr}.marketlevel{font-size:29px}.chartpickerbar{align-items:stretch;flex-direction:column;gap:6px}.chartpickerbar small{padding-bottom:0}.chartcanvas{height:300px}.chartcanvas.chartconnected{height:430px}.trademarketgrid{grid-template-columns:1fr}}
 
 
 /* ===== live research-news ticker ===== */
