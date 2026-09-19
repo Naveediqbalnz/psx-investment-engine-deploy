@@ -1,15 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+try{
+  const savedTheme=localStorage.getItem("psx-theme");
+  if(savedTheme==="dark"||savedTheme==="light") document.documentElement.setAttribute("data-theme",savedTheme);
+}catch(e){}
+</script>
 <title>PSX Sector Desk</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="config.js?v=ui-v2-theme-v2-20260919"></script>
-<link rel="stylesheet" href="styles.css?v=ui-v2-theme-v2-20260919">
+<script src="config.js?v=ui-v2-theme-explicit-20260919"></script>
+<link rel="stylesheet" href="styles.css?v=ui-v2-theme-explicit-20260919">
 </head>
 <body>
 <div id="gate" class="gate" hidden style="display:none!important">
@@ -68,7 +74,7 @@
         <div class="searchresults" id="globalSearchResults" hidden></div>
       </div>
       <span class="status" id="status">Loading</span>
-      <button class="btn small" id="themeBtn">Theme</button>
+      <button class="btn small" id="themeBtn">Dark mode</button>
       <button class="btn small" id="exportBtn" hidden>Export</button>
       <button class="btn small" id="importBtn">Import</button>
       <input type="file" id="importFile" accept="application/json" hidden>
@@ -86,8 +92,8 @@
   </div>
 </div>
 
-<script src="bundle-core.js?v=ui-v2-theme-v2-20260919"></script>
-<script src="bundle-views.js?v=ui-v2-theme-v2-20260919"></script>
-<script src="bundle-runtime.js?v=ui-v2-theme-v2-20260919"></script>
+<script src="bundle-core.js?v=ui-v2-theme-explicit-20260919"></script>
+<script src="bundle-views.js?v=ui-v2-theme-explicit-20260919"></script>
+<script src="bundle-runtime.js?v=ui-v2-theme-explicit-20260919"></script>
 </body>
 </html>
