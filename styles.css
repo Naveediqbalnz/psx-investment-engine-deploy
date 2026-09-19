@@ -604,3 +604,19 @@ input:focus,select:focus,textarea:focus{
 .sensmatrix td.current{background:var(--accent-soft);color:var(--accent);font-weight:600;box-shadow:inset 0 0 0 1px var(--accent)}
 @media(max-width:1100px){.modelcontrols{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:700px){.modelcontrols{grid-template-columns:repeat(2,1fr)}.modeltoolbar{align-items:flex-start;flex-direction:column}}
+
+
+/* ===== macro & rates run result ===== */
+.macrokpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:10px}
+.macrokpi{background:var(--surface);border:1px solid var(--rule-strong);border-radius:9px;padding:11px 12px;box-shadow:var(--shadow-sm)}
+.macrokpi span{display:block;color:var(--ink-3);font-size:9.5px;text-transform:uppercase;letter-spacing:.045em}
+.macrokpi strong{display:block;font-size:19px;margin-top:2px}.macrokpi small{display:block;color:var(--ink-3);font-size:9.5px;margin-top:1px}
+.macrokpi em{display:block;color:var(--ink-2);font-size:11px;font-style:normal;margin-top:7px}.macrokpi b{display:block;color:var(--ink-3);font-size:9.5px;margin-top:3px;font-weight:500}
+.macrostatus{display:inline-flex;border:1px solid var(--rule-strong);border-radius:999px;padding:2px 6px;font-size:9px;font-weight:600;letter-spacing:.04em}
+.macrostatus.current{color:var(--accent);background:var(--accent-soft);border-color:var(--accent)}.macrostatus.watch{color:var(--warn);background:var(--warn-soft);border-color:var(--warn)}
+.macrotransgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}.macrotrans{background:var(--surface);border:1px solid var(--rule-strong);border-radius:10px;padding:12px 13px}
+.macrotrans>div{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.macrotrans>div span{color:var(--ink-3);font-size:9px;text-transform:uppercase}.macrotrans>div strong{font-size:13px;text-align:right}
+.macrotrans p{font-size:12px;color:var(--ink-2);margin:8px 0}.macrotrans small{display:block;color:var(--ink-3);font-size:10.5px;margin-top:3px}.macrotrans small b{color:var(--ink-2)}
+.macroimpactgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin-top:10px}.macroimpactgrid>div{background:var(--sunken);border:1px solid var(--rule);border-radius:7px;padding:8px}.macroimpactgrid b{display:block;color:var(--ink-3);font-size:9px;text-transform:uppercase;margin-bottom:3px}.macroimpactgrid span{display:block;color:var(--ink-2);font-size:11px;line-height:1.45}
+@media(max-width:1100px){.macrokpis{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:760px){.macrokpis{grid-template-columns:repeat(2,1fr)}.macrotransgrid,.macroimpactgrid{grid-template-columns:1fr}}
