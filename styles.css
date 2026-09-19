@@ -762,3 +762,11 @@ input:focus,select:focus,textarea:focus{
   .topbar > .globalsearch{flex:0 0 340px;min-width:340px;max-width:340px;margin-left:0}
   .globalsearch input{width:100%}
 }
+
+
+/* ===== compact search correction ===== */
+@media (min-width:1401px){
+  .topbar > .globalsearch{flex:0 0 220px;min-width:220px;max-width:220px}
+  .topbar > .topnav{flex:1 1 0;min-width:90px}
+  .top-actions{flex:0 0 auto}
+}
