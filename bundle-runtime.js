@@ -91,7 +91,15 @@ function bind(){
     el.oninput=el.onchange=()=>{state.macro[el.dataset.macro]=el.value; saveMacro();}; mark(el);});
 
   document.querySelectorAll("[data-sec]").forEach(el=>{
-    el.oninput=el.onchange=()=>{state.sectors[el.dataset.sec][el.dataset.field]=el.value; saveSector(el.dataset.sec);}; mark(el);});
+    el.oninput=el.onchange=()=>{
+      state.sectors[el.dataset.sec][el.dataset.field]=el.value;
+      if(["r1m","r3m","r12m"].includes(el.dataset.field)){
+        el.classList.remove("pos","neg");
+        const cls=directionClass(el.value);
+        if(cls) el.classList.add(cls);
+      }
+      saveSector(el.dataset.sec);
+    }; mark(el);});
 
   const s=SECTORS.find(x=>x.id===route.id);
   if(s){

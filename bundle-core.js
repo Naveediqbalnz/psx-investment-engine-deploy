@@ -124,7 +124,8 @@ const fmtSmart = (v,maxDecimals=4) => {
   const decimals=raw.includes(".")?Math.min(raw.split(".")[1].length,maxDecimals):0;
   return x.toLocaleString("en-US",{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
 };
-const pct = n => n===null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
+const pct = n => n===null?"—":(n>0?"+":"")+n.toFixed(1)+"%";
+const directionClass = v => { const x=num(v); return x===null||x===0?"":x>0?"pos":"neg"; };
 const daysSince = ts => ts? Math.floor((Date.now()-ts)/86400000):null;
 const ageClass = d => d===null?"":d<=35?"fresh":d<=75?"aging":"stale";
 const todayISO = () => new Date().toISOString().slice(0,10);

@@ -145,8 +145,9 @@ function readingHTML(s,st){
     +'<p class="hint">Valuation metric for this sector: '+esc(s.valuation)+'.</p>'+fields;
 }
 function perfHTML(s,st){
+  const returnFields=["r1m","r3m","r12m"];
   const f = PERF_FIELDS.map(p=>'<div class="field"><label for="p_'+p[0]+'">'+esc(p[1])+'</label>'
-    +'<input type="text" id="p_'+p[0]+'" data-sec="'+s.id+'" data-field="'+p[0]+'" value="'+esc(st[p[0]]||"")+'"></div>').join("");
+    +'<input type="text" id="p_'+p[0]+'" data-sec="'+s.id+'" data-field="'+p[0]+'" class="'+(returnFields.includes(p[0])?directionClass(st[p[0]]):"")+'" value="'+esc(st[p[0]]||"")+'"></div>').join("");
   return '<p class="hint">Relative return is the honest test of a sector call. Absolute return in a rising market tells you nothing about whether the call was right.</p>'
     +'<div class="grid3">'+f+'</div>';
 }
@@ -297,7 +298,7 @@ function updateMeblValuationInteractive(){
   const p={book:root.dataset.book,price:root.dataset.price,tbill:root.dataset.tbill};
   root.querySelectorAll("[data-mebl-model]").forEach(el=>p[el.dataset.meblModel]=el.value);
   const m=bankResidualModel(p);
-  const put=(k,v)=>{const el=root.querySelector('[data-model-output="'+k+'"]');if(el)el.textContent=v;};
+  const put=(k,v,direction)=>{const el=root.querySelector('[data-model-output="'+k+'"]');if(el){el.textContent=v;el.classList.remove("pos","neg");const cls=directionClass(direction);if(cls)el.classList.add(cls);}};
   if(!m){
     put("fair","—");put("ri","—");put("ddm","—");put("vsprice","—");put("mos","—");put("pb","—");
     const mat=root.querySelector("#meblSensitivity"); if(mat) mat.innerHTML='<div class="resultempty error"><strong>Invalid model assumptions</strong><span>Cost of equity must exceed terminal growth, and terminal ROE must exceed terminal growth.</span></div>';
@@ -309,8 +310,8 @@ function updateMeblValuationInteractive(){
   put("fair","Rs "+fmt(m.fair,2));
   put("ri","Rs "+fmt(m.residual,2));
   put("ddm","Rs "+fmt(m.ddm,2));
-  put("vsprice",vs===null?"—":pct(vs));
-  put("mos",mos===null?"—":pct(mos));
+  put("vsprice",vs===null?"—":pct(vs),vs);
+  put("mos",mos===null?"—":pct(mos),mos);
   put("pb",book?fmt(m.fair/book,2)+"x":"—");
   put("roePath",m.roes.map(x=>fmt(x,1)+"%").join(" → "));
   put("terminalPayout",fmt(m.terminalPayout,1)+"%");
@@ -530,7 +531,7 @@ function bankCompanyHTML(t,c,master,dc){
         +'<dt>Cost of equity</dt><dd>'+fmtSmart(s.cost_of_equity_pct,1)+'%</dd>'
         +'<dt>Terminal ROE</dt><dd>'+fmtSmart(s.terminal_roe_pct,1)+'%</dd>'
         +'<dt>Terminal growth</dt><dd>'+fmtSmart(s.terminal_growth_pct,1)+'%</dd>'
-        +'<dt>Vs current price</dt><dd class="'+(num(s.upside_downside_pct)>=0?"pos":"neg")+'">'+pct(num(s.upside_downside_pct))+'</dd></dl></div>';
+        +'<dt>Vs current price</dt><dd class="'+directionClass(s.upside_downside_pct)+'">'+pct(num(s.upside_downside_pct))+'</dd></dl></div>';
     }).join("");
 
     const historyMap={};
@@ -552,7 +553,7 @@ function bankCompanyHTML(t,c,master,dc){
         +'<div class="kpi"><div class="k">Current price</div><div class="v">Rs '+fmt(price,2)+'</div><div class="meta">'+fmtDate(master.price_date)+'</div></div>'
         +'<div class="kpi"><div class="k">Saved model range</div><div class="v">Rs '+(bearScenario?fmtSmart(bearScenario.blended_fair_value,0):"—")+'–'+(bullScenario?fmtSmart(bullScenario.blended_fair_value,0):"—")+'</div></div>'
         +'<div class="kpi"><div class="k">Saved base value</div><div class="v">'+(baseScenario?"Rs "+fmtSmart(baseScenario.blended_fair_value,2):"—")+'</div></div>'
-        +'<div class="kpi"><div class="k">Saved base vs price</div><div class="v '+(baseScenario&&num(baseScenario.upside_downside_pct)>=0?"pos":"neg")+'">'+(baseScenario?pct(num(baseScenario.upside_downside_pct)):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Saved base vs price</div><div class="v '+(baseScenario?directionClass(baseScenario.upside_downside_pct):"")+'">'+(baseScenario?pct(num(baseScenario.upside_downside_pct)):"—")+'</div></div>'
       +'</div>'
       +'<div class="valscenarios">'+(scenarioCards||'<p class="empty">No stored valuation scenarios.</p>')+'</div>'
 
@@ -614,7 +615,7 @@ function bankCompanyHTML(t,c,master,dc){
         +'<div class="field"><label>Required return %</label><input type="text" data-co-field="required" value="'+esc(c.required||"")+'"></div>'
       +'</div>'
       +'<div class="bank-kpis four" style="margin-top:14px">'
-        +'<div class="kpi"><div class="k">Personal base upside</div><div class="v '+(upside===null?"na":upside>=0?"pos":"neg")+'">'+(upside===null?"—":pct(upside))+'</div></div>'
+        +'<div class="kpi"><div class="k">Personal base upside</div><div class="v '+(upside===null?"na":directionClass(upside))+'">'+(upside===null?"—":pct(upside))+'</div></div>'
         +'<div class="kpi"><div class="k">Current P/B</div><div class="v">'+(pb===null?"—":fmt(pb,2)+"x")+'</div></div>'
         +'<div class="kpi"><div class="k">Saved model base P/B</div><div class="v">'+(latestValuation&&num(latestValuation.target_pb)!==null?fmtSmart(latestValuation.target_pb,2)+"x":"—")+'</div></div>'
         +'<div class="kpi"><div class="k">Saved base required return</div><div class="v">'+(baseScenario?fmtSmart(baseScenario.cost_of_equity_pct,1)+"%":"—")+'</div></div>'
@@ -703,10 +704,10 @@ function companyHTML(t){
       +'<div class="field"><label>Bull Rs</label><input type="text" data-co-field="bull" value="'+esc(c.bull||"")+'"></div>'
       +'<div class="field"><label>Required return %</label><input type="text" data-co-field="required" value="'+esc(c.required||"")+'"></div>'
     +'</div>'
-    +'<div class="kpis"><div class="kpi"><div class="k">Upside to base</div><div class="v'+(upside===null?" na":"")+'">'+(upside===null?"—":pct(upside))+'</div></div>'
-      +'<div class="kpi"><div class="k">Margin of safety</div><div class="v'+(mos===null?" na":"")+'">'+(mos===null?"—":mos.toFixed(1)+"%")+'</div></div>'
-      +'<div class="kpi"><div class="k">Bear downside</div><div class="v'+((price&&bear!==null)?"":" na")+'">'+((price&&bear!==null)?pct(((bear-price)/price)*100):"—")+'</div></div>'
-      +'<div class="kpi"><div class="k">Bull upside</div><div class="v'+((price&&bull!==null)?"":" na")+'">'+((price&&bull!==null)?pct(((bull-price)/price)*100):"—")+'</div></div></div>'
+    +'<div class="kpis"><div class="kpi"><div class="k">Upside to base</div><div class="v '+(upside===null?"na":directionClass(upside))+'">'+(upside===null?"—":pct(upside))+'</div></div>'
+      +'<div class="kpi"><div class="k">Margin of safety</div><div class="v '+(mos===null?"na":directionClass(mos))+'">'+(mos===null?"—":pct(mos))+'</div></div>'
+      +'<div class="kpi"><div class="k">Bear downside</div><div class="v '+((price&&bear!==null)?directionClass(((bear-price)/price)*100):"na")+'">'+((price&&bear!==null)?pct(((bear-price)/price)*100):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Bull upside</div><div class="v '+((price&&bull!==null)?directionClass(((bull-price)/price)*100):"na")+'">'+((price&&bull!==null)?pct(((bull-price)/price)*100):"—")+'</div></div></div>'
     +'<h3 class="block">Judgement — personal overlay</h3>'
     +['thesis','catalyst','risks','quality'].map(f=>'<div class="field"><label>'
       +({thesis:"Thesis",catalyst:"Next catalyst",risks:"What kills it",quality:"Business quality and balance sheet"}[f])+'</label>'
@@ -725,7 +726,7 @@ function valuationHTML(){
       +"<td class='pad num'>"+(c.bear===null?"—":fmt(c.bear,0))+"</td>"
       +"<td class='pad num'>"+(c.base===null?"—":fmt(c.base,0))+"</td>"
       +"<td class='pad num'>"+(c.bull===null?"—":fmt(c.bull,0))+"</td>"
-      +"<td class='pad num "+(c.upside===null?"":c.upside>=0?"pos":"neg")+"'>"+(c.upside===null?"—":pct(c.upside))+"</td>"
+      +"<td class='pad num "+(c.upside===null?"":directionClass(c.upside))+"'>"+(c.upside===null?"—":pct(c.upside))+"</td>"
       +"<td class='pad num'>"+(c.mos===null?"—":c.mos.toFixed(0)+"%")+"</td></tr>";
   }).join("");
   return '<h2 class="section">Valuation</h2>'
@@ -754,7 +755,7 @@ function portfolioHTML(){
       +'<td class="num"><input type=text data-pos='+i+' data-col="price" value="'+esc(r.price!==null?r.price:"")+'"></td>'
       +'<td class="pad num">'+(r.value===null?"—":fmt(r.value,0))+'</td>'
       +'<td class="pad num">'+(r.weight===null?"—":r.weight.toFixed(1)+"%")+'</td>'
-      +'<td class="pad num '+(r.pnl===null?"":r.pnl>=0?"pos":"neg")+'">'+(r.pnl===null?"—":pct(r.pnl))+'</td>'
+      +'<td class="pad num '+(r.pnl===null?"":directionClass(r.pnl))+'">'+(r.pnl===null?"—":pct(r.pnl))+'</td>'
       +'<td class="num"><input type=text data-pos='+i+' data-col="stop" value="'+esc(r.stop||"")+'" placeholder="stop"></td>'
       +'<td class="num"><input type=text data-pos='+i+' data-col="target" value="'+esc(r.target||"")+'" placeholder="target"></td>'
       +'<td><input type=date data-pos='+i+' data-col="review" value="'+esc(r.review||"")+'"></td>'
@@ -1061,13 +1062,13 @@ function macroRatesResultHTML(live,events,macro){
     ["USD / PKR",num(pkr&&pkr.latest_value),pkr&&pkr.unit,pkr&&pkr.change_value,pkr&&pkr.release_date],
     ["SBP FX reserves",num(sbpRes&&sbpRes.latest_value),sbpRes&&sbpRes.unit,sbpRes&&sbpRes.change_value,sbpRes&&sbpRes.release_date],
     ["KSE-100",num(kse&&kse.latest_value),kse&&kse.unit,kse&&kse.change_value,kse&&kse.release_date]
-  ].map(x=>'<div class="macrokpi"><span>'+esc(x[0])+'</span><strong>'+fmtSmart(x[1])+'</strong><small>'+esc(x[2]||"")+'</small><em>'+esc(x[3]||"—")+'</em><b>'+fmtDate(x[4])+'</b></div>').join("");
+  ].map(x=>'<div class="macrokpi"><span>'+esc(x[0])+'</span><strong>'+fmtSmart(x[1])+'</strong><small>'+esc(x[2]||"")+'</small><em class="'+directionClass(x[3])+'">'+esc(x[3]||"—")+'</em><b>'+fmtDate(x[4])+'</b></div>').join("");
 
   const indicatorRows=macro.map(m=>
     '<tr><td class="pad"><strong>'+esc(m.indicator||"—")+'</strong><br><small>'+esc(m.category||"—")+'</small></td>'
       +'<td class="pad num">'+fmtSmart(m.latest_value)+'</td>'
       +'<td class="pad num">'+fmtSmart(m.previous_value)+'</td>'
-      +'<td class="pad">'+esc(m.change_value||"—")+'</td>'
+      +'<td class="pad '+directionClass(m.change_value)+'">'+esc(m.change_value||"—")+'</td>'
       +'<td class="pad">'+esc(m.period||"—")+'</td>'
       +'<td class="pad">'+fmtDate(m.release_date)+'</td>'
       +'<td class="pad"><span class="macrostatus '+esc(String(m.status||"").toLowerCase())+'">'+esc(String(m.status||"—").toUpperCase())+'</span></td>'
@@ -1099,8 +1100,8 @@ function macroRatesResultHTML(live,events,macro){
     +'<div class="macrokpis">'+keyCards+'</div>'
     +'<div class="sectionline"><h3 class="block">Derived rate context</h3><span>Calculated from stored official inputs</span></div>'
     +'<div class="bank-kpis four">'
-      +'<div class="kpi"><div class="k">Policy less CPI</div><div class="v '+(realPolicy===null?"na":realPolicy>=0?"pos":"neg")+'">'+(realPolicy===null?"—":(realPolicy>=0?"+":"")+fmt(realPolicy,2)+"pp")+'</div><div class="meta">Simple nominal spread, not a forward real rate</div></div>'
-      +'<div class="kpi"><div class="k">12M T-bill less CPI</div><div class="v '+(realTbill===null?"na":realTbill>=0?"pos":"neg")+'">'+(realTbill===null?"—":(realTbill>=0?"+":"")+fmt(realTbill,2)+"pp")+'</div><div class="meta">Simple nominal spread</div></div>'
+      +'<div class="kpi"><div class="k">Policy less CPI</div><div class="v '+(realPolicy===null?"na":directionClass(realPolicy))+'">'+(realPolicy===null?"—":(realPolicy>0?"+":"")+fmt(realPolicy,2)+"pp")+'</div><div class="meta">Simple nominal spread, not a forward real rate</div></div>'
+      +'<div class="kpi"><div class="k">12M T-bill less CPI</div><div class="v '+(realTbill===null?"na":directionClass(realTbill))+'">'+(realTbill===null?"—":(realTbill>0?"+":"")+fmt(realTbill,2)+"pp")+'</div><div class="meta">Simple nominal spread</div></div>'
       +'<div class="kpi"><div class="k">Policy vs T-bill</div><div class="v">'+(policyV!==null&&tbillV!==null?fmt(tbillV-policyV,2)+"pp":"—")+'</div></div>'
       +'<div class="kpi"><div class="k">Total / SBP reserves</div><div class="v">'+(num(totalRes&&totalRes.latest_value)!==null&&num(sbpRes&&sbpRes.latest_value)!==null?fmt(num(totalRes.latest_value)-num(sbpRes.latest_value),1)+" USDm":"—")+'</div><div class="meta">Calculated difference</div></div>'
     +'</div>'
@@ -1440,9 +1441,9 @@ function tradingChartHTML(){
   const kse=tradingKseSnapshot();
   const modes=[["price","Price"],["volume","Volume"],["returns","Returns"],["relative","Relative Strength"],["trading","Trading Chart"]];
   const ranges=["1D","1W","1M","3M","6M","YTD","1Y","3Y","5Y","All"];
-  const moveClass=kse.pctMove===null?"neutral":kse.pctMove>=0?"up":"down";
-  const moveText=kse.pctMove===null?"—":(kse.pctMove>=0?"+":"")+fmt(kse.pctMove,2)+"%";
-  const pointsText=kse.points===null?"—":(kse.points>=0?"+":"")+fmt(kse.points,2);
+  const moveClass=kse.pctMove===null||kse.pctMove===0?"neutral":kse.pctMove>0?"up":"down";
+  const moveText=kse.pctMove===null?"—":(kse.pctMove>0?"+":"")+fmt(kse.pctMove,2)+"%";
+  const pointsText=kse.points===null?"—":(kse.points>0?"+":"")+fmt(kse.points,2);
   const mode=route.tradeChartMode||"price", range=route.tradeRange||"1M";
   const historyNeed=mode==="trading"?"OHLCV / candlestick history":mode==="volume"?"volume history":mode==="returns"?"return history":mode==="relative"?"relative-strength history":"price history";
   return '<section class="marketterminal">'
