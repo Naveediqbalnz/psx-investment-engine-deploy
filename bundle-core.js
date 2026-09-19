@@ -263,7 +263,7 @@ function bindMasterData(){}
 /* ===================== live Supabase research adapter ===================== */
 function initLiveState(){
   if(!state.live){
-    state.live={macro:[],financials:[],ratios:[],prices:[],valuations:[],portfolio:[],events:[],queue:[],errors:[]};
+    state.live={macro:[],financials:[],ratios:[],prices:[],valuations:[],portfolio:[],events:[],queue:[],sourceDocuments:[],coverage:[],errors:[]};
   }
   return state.live;
 }
@@ -276,6 +276,14 @@ async function liveRead(table, select="*", orderColumn=null, ascending=true){
     return [];
   }
   return data||[];
+}
+function sourceDocumentById(id){
+  if(id==null) return null;
+  return initLiveState().sourceDocuments.find(x=>String(x.id)===String(id))||null;
+}
+function companyCoverageByTicker(ticker){
+  const t=cleanTicker(ticker);
+  return initLiveState().coverage.find(x=>cleanTicker(x.ticker)===t)||null;
 }
 function findMacro(indicator){
   return initLiveState().macro.find(x=>String(x.indicator||"").toLowerCase()===String(indicator||"").toLowerCase())||null;
@@ -322,6 +330,8 @@ function mapSectorsIntoLegacy(){
   });
 }
 function mapCompaniesIntoLegacy(){
+  const coverageMap={};
+  initLiveState().coverage.forEach(r=>{ const t=cleanTicker(r.ticker); if(t) coverageMap[t]=r; });
   const financialByTicker={};
   initLiveState().financials.forEach(r=>{
     const t=cleanTicker(r.ticker);
@@ -349,11 +359,16 @@ function mapCompaniesIntoLegacy(){
           roe:ratio.roe_pct==null?"":String(ratio.roe_pct),
           dps:f.dividends==null?"":String(f.dividends),
           de:ratio.debt_to_equity==null?"":String(ratio.debt_to_equity),
-          source_name:f.source_name||"",
-          source_url:f.source_url||""
+          source_name:f.source_name||(sourceDocumentById(f.source_document_id)||{}).source_name||"",
+          source_url:f.source_url||(sourceDocumentById(f.source_document_id)||{}).source_url||"",
+          source_title:(sourceDocumentById(f.source_document_id)||{}).title||"",
+          source_page:f.source_page||null,
+          verification_status:f.verification_status||"PROVISIONAL",
+          verification_note:f.verification_note||""
         };
       });
     }
+    existing.dataCoverage=coverageMap[t]||null;
     state.companies[t]=existing;
   });
 }
@@ -371,7 +386,7 @@ function mapEventsIntoLegacy(){
 async function loadLiveResearchData(){
   const live=initLiveState();
   live.errors=[];
-  const [macro,financials,ratios,prices,valuations,portfolio,events,queue]=await Promise.all([
+  const [macro,financials,ratios,prices,valuations,portfolio,events,queue,sourceDocuments,coverage]=await Promise.all([
     liveRead("macro_indicators","*","id",true),
     liveRead("company_financials","*","period_end",false),
     liveRead("company_ratios","*","as_of",false),
@@ -379,9 +394,11 @@ async function loadLiveResearchData(){
     liveRead("valuations","*","as_of",false),
     liveRead("portfolio_holdings","*","ticker",true),
     liveRead("research_events","*","event_date",false),
-    liveRead("research_queue","*","priority",true)
+    liveRead("research_queue","*","priority",true),
+    liveRead("source_documents","*","retrieved_at",false),
+    liveRead("company_data_coverage","*","ticker",true)
   ]);
-  Object.assign(live,{macro,financials,ratios,prices,valuations,portfolio,events,queue});
+  Object.assign(live,{macro,financials,ratios,prices,valuations,portfolio,events,queue,sourceDocuments,coverage});
   mapMacroIntoLegacy();
   mapSectorsIntoLegacy();
   mapCompaniesIntoLegacy();
