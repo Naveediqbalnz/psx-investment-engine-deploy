@@ -300,6 +300,26 @@ $("#importFile").onchange=e=>{ const f=e.target.files[0]; if(f) importJSON(f); e
 $("#signOut").onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 
 function gateMsg(t){ $("#gateMsg").textContent=t||""; }
+function applyGuestReadOnly(){
+  document.body.classList.add("guest-readonly");
+  ["#importBtn","#importFile","#exportBtn","#signOut"].forEach(sel=>{ const el=$(sel); if(el) el.hidden=true; });
+  document.querySelectorAll("input, textarea, select").forEach(el=>{ el.disabled=true; });
+  document.querySelectorAll("[id^='add'], [data-delrow], [data-delco], [data-delfy], [data-delpos], [data-delev], [data-delsrc], [data-pull]").forEach(el=>{ el.hidden=true; });
+}
+async function startGuestApp(){
+  session = null;
+  $("#gate").hidden = true;
+  $("#app").hidden = false;
+  setStatus("Loading live data…","saving");
+  await loadMasterData();
+  await loadLiveResearchData();
+  renderNav(); render();
+  applyGuestReadOnly();
+  const observer=new MutationObserver(()=>applyGuestReadOnly());
+  observer.observe($("#view"),{childList:true,subtree:true});
+  setStatus("Temporary read-only access");
+  $("#cmd").hidden = true;
+}
 async function startApp(sess){
   session = sess;
   $("#gate").hidden = true;
@@ -330,6 +350,13 @@ async function startApp(sess){
   $("#gate").hidden=false;
   gateMsg("Checking sign-in link…");
   sb = window.supabase.createClient(CONFIG.supabaseUrl, browserKey);
+
+  // Temporary read-only guest mode. Database permissions remain enforced by RLS.
+  const TEMP_GUEST_MODE = true;
+  if(TEMP_GUEST_MODE){
+    await startGuestApp();
+    return;
+  }
 
   let recoveryActive=false;
   function showRecovery(sess){
