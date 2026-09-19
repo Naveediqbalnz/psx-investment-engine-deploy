@@ -15,7 +15,7 @@ try{
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="config.js?v=auth-recovery-fix-20260919"></script>
-<link rel="stylesheet" href="styles.css?v=auth-recovery-fix-20260919">
+<link rel="stylesheet" href="styles.css?v=live-news-ticker-20260919">
 <style>[hidden]{display:none!important}</style>
 </head>
 <body>
@@ -78,6 +78,11 @@ try{
   </nav>
   <div class="main">
     <div id="banner"></div>
+    <section class="live-news-ticker" id="liveNewsTicker" aria-label="Live market news" aria-live="polite">
+      <div class="ticker-label"><span class="ticker-pulse" aria-hidden="true"></span><strong>LIVE</strong></div>
+      <div class="ticker-window"><div class="ticker-track"><span class="ticker-loading">Loading latest verified news…</span></div></div>
+      <button class="ticker-open" type="button" data-nav="news" aria-label="Open all news">All news</button>
+    </section>
     <div class="topbar">
       <div class="workspace-switch top-workspace" aria-label="Workspace">
         <button class="workspacebtn" data-workspace-switch="investing">Investing</button>
@@ -125,6 +130,6 @@ try{
 
 <script src="bundle-core.js?v=auth-recovery-fix-20260919"></script>
 <script src="bundle-views.js?v=auth-recovery-fix-20260919"></script>
-<script src="bundle-runtime.js?v=auth-recovery-fix-20260919"></script>
+<script src="bundle-runtime.js?v=live-news-ticker-20260919"></script>
 </body>
 </html>
