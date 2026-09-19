@@ -723,23 +723,42 @@ function analysisImpactColumn(title,field,events){
 }
 function analysisHTML(){
   const live=initLiveState();
+  const master=initMasterState();
+  const mode=route.analysisMode||"full";
   const events=(live.events||[]).slice().sort((a,b)=>
     String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
   );
   const macro=(live.macro||[]).slice();
-  const sectors=(initMasterState().sectors||[]).slice();
+  const sectors=(master.sectors||[]).slice();
+  const companies=(master.companies||[]).slice();
+  const valuations=(live.valuations||[]).slice();
   const latestFacts=events.slice(0,5);
-  const actions=events.filter(e=>String(e.required_action||"").trim()).slice(0,6);
-  const macroCards=macro.slice(0,8).map(m=>
+  const actions=events.filter(e=>String(e.required_action||"").trim()).slice(0,8);
+  const companyEvents=events.filter(e=>String(e.entity_type||"").toLowerCase()==="company");
+  const macroEvents=events.filter(e=>String(e.entity_type||"").toLowerCase()==="macro");
+  const modeLabels={full:"Full Daily Desk",macro:"Macro & Rates",sectors:"Sector Scan",companies:"Company Changes",valuation:"Valuation Scan",risk:"Risk & Catalysts"};
+  const launchers=[
+    ["full","Full Daily Desk","Whole PSX research stack"],
+    ["macro","Macro & Rates","Rates, inflation, PKR, liquidity"],
+    ["sectors","Sector Scan","Sector regime, catalysts and risks"],
+    ["companies","Company Changes","Reports and company-level developments"],
+    ["valuation","Valuation Scan","Price, multiples and model coverage"],
+    ["risk","Risk & Catalysts","Material risks, catalysts and actions"]
+  ].map(x=>'<button class="analysisrun '+(mode===x[0]?"active":"")+'" data-analysis-run="'+x[0]+'"><span>Run</span><strong>'+esc(x[1])+'</strong><small>'+esc(x[2])+'</small></button>').join("");
+
+  const macroCards=macro.slice(0,10).map(m=>
     '<div class="analysisstat"><span>'+esc(m.indicator||"—")+'</span><strong>'+fmtSmart(m.latest_value)+'</strong>'
       +'<small>'+esc([m.unit,m.period].filter(Boolean).join(" · ")||"")+'</small></div>'
   ).join("");
-  const factRows=latestFacts.map(e=>
+
+  const factsForMode=(mode==="macro"?macroEvents:mode==="companies"?companyEvents:latestFacts).slice(0,6);
+  const factRows=factsForMode.map(e=>
     '<div class="factinterpret"><div><span class="analysislabel">FACT</span><strong>'+esc(e.headline||"—")+'</strong><p>'+esc(e.fact_summary||"—")+'</p>'
-      +'<small>'+esc(sourceTextForEvent(e))+'</small></div>'
+      +'<small>'+fmtDate(e.event_date)+' · '+esc(sourceTextForEvent(e))+'</small></div>'
       +'<div><span class="analysislabel">INTERPRETATION</span><p>'+esc(e.what_changed||e.analyst_note||"—")+'</p></div></div>'
   ).join("");
-  const sectorRows=sectors.filter(s=>s.sector_view||s.earnings_direction||s.risks||s.catalysts).slice(0,12).map(s=>
+
+  const sectorRows=sectors.filter(s=>s.sector_view||s.earnings_direction||s.risks||s.catalysts).slice(0,20).map(s=>
     '<tr><td class="pad"><strong>'+esc(s.sector||"—")+'</strong></td>'
       +'<td class="pad">'+esc(s.regime||"—")+'</td>'
       +'<td class="pad">'+esc(s.earnings_direction||"—")+'</td>'
@@ -747,24 +766,88 @@ function analysisHTML(){
       +'<td class="pad">'+esc(s.catalysts||"—")+'</td>'
       +'<td class="pad">'+esc(s.risks||"—")+'</td></tr>'
   ).join("");
-  return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
-    +'<p class="sub">The same decision structure used in the scheduled PSX desk: verified facts first, then interpretation, earnings/valuation/risk impact, and what needs to be checked next.</p></div></div>'
-    +'<div class="sectionline"><h3 class="block">Market & macro snapshot</h3><span>Verified database inputs</span></div>'
-    +'<div class="analysisstats">'+(macroCards||'<p class="empty">No macro data available.</p>')+'</div>'
-    +'<div class="sectionline"><h3 class="block">Facts vs interpretation</h3><span>Latest material developments</span></div>'
-    +(factRows||'<p class="empty">No research events available.</p>')
-    +'<div class="sectionline"><h3 class="block">Investment transmission</h3><span>How new facts reach the model</span></div>'
+
+  const companyRows=companies.slice().sort((a,b)=>{
+    const ad=String(a.latest_report_period||a.last_research_update||"");
+    const bd=String(b.latest_report_period||b.last_research_update||"");
+    return bd.localeCompare(ad);
+  }).slice(0,25).map(c=>
+    '<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td>'
+      +'<td class="pad">'+esc(c.company_name||"—")+'</td><td class="pad">'+esc(c.sector||"—")+'</td>'
+      +'<td class="pad num">'+fmtSmart(c.last_price,2)+'</td><td class="pad num">'+(c.pe==null?"—":fmtSmart(c.pe,2)+"x")+'</td>'
+      +'<td class="pad">'+fmtDate(c.latest_report_period)+'</td><td class="pad">'+verificationBadge(c.profile_verification_status||"MISSING")+'</td></tr>'
+  ).join("");
+
+  const valuationMap={};
+  valuations.forEach(v=>{ const t=cleanTicker(v.ticker); if(t&&!valuationMap[t]) valuationMap[t]=v; });
+  const valRows=companies.filter(c=>num(c.last_price)!==null||num(c.pe)!==null||valuationMap[cleanTicker(c.ticker)])
+    .sort((a,b)=>(num(a.pe)??1e9)-(num(b.pe)??1e9)).slice(0,30).map(c=>{
+      const v=valuationMap[cleanTicker(c.ticker)]||{};
+      return '<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td>'
+        +'<td class="pad">'+esc(c.sector||"—")+'</td><td class="pad num">'+fmtSmart(c.last_price,2)+'</td>'
+        +'<td class="pad num">'+(c.pe==null?"—":fmtSmart(c.pe,2)+"x")+'</td>'
+        +'<td class="pad num">'+(c.pb==null?"—":fmtSmart(c.pb,2)+"x")+'</td>'
+        +'<td class="pad num">'+(v.base_value==null?"—":fmtSmart(v.base_value,2))+'</td>'
+        +'<td class="pad">'+verificationBadge(v.verification_status||"MISSING")+'</td></tr>';
+    }).join("");
+
+  const riskEvents=events.filter(e=>
+    String(e.risk_impact||"").trim()||String(e.required_action||"").trim()||String(e.materiality||"").toLowerCase()==="high"
+  ).slice(0,12);
+  const riskRows=riskEvents.map(e=>
+    '<div class="riskcard"><div><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span>'
+      +'<small>'+fmtDate(e.event_date)+' · '+esc(e.ticker_sector||e.entity_type||"Market")+'</small></div>'
+      +'<strong>'+esc(e.headline||"—")+'</strong>'
+      +'<p>'+esc(e.risk_impact||e.what_changed||"—")+'</p>'
+      +(e.required_action?'<em>'+esc(e.required_action)+'</em>':"")+'</div>'
+  ).join("");
+
+  const fullMacro = '<div class="sectionline"><h3 class="block">Market & macro snapshot</h3><span>Latest verified database inputs</span></div>'
+    +'<div class="analysisstats">'+(macroCards||'<p class="empty">No macro data available.</p>')+'</div>';
+
+  const fullFacts = '<div class="sectionline"><h3 class="block">Facts vs interpretation</h3><span>Latest material developments</span></div>'
+    +(factRows||'<p class="empty">No research events available.</p>');
+
+  const transmission = '<div class="sectionline"><h3 class="block">Investment transmission</h3><span>How new facts reach the model</span></div>'
     +'<div class="analysisgrid">'
       +analysisImpactColumn("Earnings impact","earnings_impact",events)
       +analysisImpactColumn("Valuation impact","valuation_impact",events)
       +analysisImpactColumn("Risk impact","risk_impact",events)
-    +'</div>'
-    +'<div class="sectionline"><h3 class="block">Sector desk</h3><span>Current research framework</span></div>'
+    +'</div>';
+
+  const sectorDesk = '<div class="sectionline"><h3 class="block">Sector desk</h3><span>Current research framework</span></div>'
     +'<div class="scroll"><table><thead><tr><th>Sector</th><th>Regime</th><th>Earnings</th><th>Current view</th><th>Catalysts</th><th>Risks</th></tr></thead><tbody>'
-      +(sectorRows||'<tr><td class="pad empty" colspan="6">Sector analysis has not been populated yet.</td></tr>')+'</tbody></table></div>'
-    +'<div class="sectionline"><h3 class="block">What to do next</h3><span>Research actions, not trading instructions</span></div>'
+      +(sectorRows||'<tr><td class="pad empty" colspan="6">Sector analysis has not been populated yet.</td></tr>')+'</tbody></table></div>';
+
+  const companyDesk = '<div class="sectionline"><h3 class="block">Company changes</h3><span>Recently reported / updated companies</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th class="num">Price</th><th class="num">P/E</th><th>Latest report</th><th>Profile</th></tr></thead><tbody>'
+      +(companyRows||'<tr><td class="pad empty" colspan="7">No company records available.</td></tr>')+'</tbody></table></div>';
+
+  const valuationDesk = '<div class="sectionline"><h3 class="block">Valuation scan</h3><span>Available inputs only</span></div>'
+    +'<div class="noticebox"><strong>Coverage rule</strong><span>Missing P/B, intrinsic value or verification remains —. A low P/E is not treated as a buy signal.</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Sector</th><th class="num">Price</th><th class="num">P/E</th><th class="num">P/B</th><th class="num">Base value</th><th>Verification</th></tr></thead><tbody>'
+      +(valRows||'<tr><td class="pad empty" colspan="7">No valuation inputs available.</td></tr>')+'</tbody></table></div>';
+
+  const riskDesk = '<div class="sectionline"><h3 class="block">Risk & catalyst scan</h3><span>Material events and required research</span></div>'
+    +(riskRows?'<div class="riskgrid">'+riskRows+'</div>':'<p class="empty">No risk events recorded.</p>');
+
+  const actionDesk = '<div class="sectionline"><h3 class="block">What to investigate next</h3><span>Research actions, not trading instructions</span></div>'
     +(actions.length?actions.map(e=>'<div class="queue warn"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong><span class="why">'+esc(e.required_action)+'</span><span class="act">'+fmtDate(e.event_date)+'</span></div>').join("")
       :'<p class="empty">No outstanding research actions recorded.</p>');
+
+  let body="";
+  if(mode==="macro") body=fullMacro+fullFacts+transmission+actionDesk;
+  else if(mode==="sectors") body=sectorDesk+transmission+riskDesk+actionDesk;
+  else if(mode==="companies") body=companyDesk+fullFacts+actionDesk;
+  else if(mode==="valuation") body=valuationDesk+transmission+actionDesk;
+  else if(mode==="risk") body=riskDesk+fullFacts+actionDesk;
+  else body=fullMacro+fullFacts+transmission+sectorDesk+companyDesk+valuationDesk+riskDesk+actionDesk;
+
+  return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
+    +'<p class="sub">Run a focused PSX analysis against the latest research database. Facts and interpretation stay separate.</p></div>'
+    +'<div class="analysisrunmeta"><span>Current run</span><strong>'+esc(modeLabels[mode]||modeLabels.full)+'</strong><small>'+fmtDate(todayISO())+'</small></div></div>'
+    +'<div class="analysislauncher">'+launchers+'</div>'
+    +body;
 }
 
 ;
