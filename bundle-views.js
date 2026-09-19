@@ -149,6 +149,7 @@ function perfHTML(s,st){
 }
 
 ;
+
 /* ===== assets/views-02-01.js ===== */
 function verificationBadge(status){
   const s=String(status||"").toUpperCase();
@@ -211,6 +212,7 @@ function companiesHTML(){
 }
 
 ;
+
 /* ===== assets/views-02-02.js ===== */
 function companyLiveFinancials(ticker){
   const t=cleanTicker(ticker);
@@ -481,6 +483,7 @@ function companyHTML(t){
 }
 
 ;
+
 /* ===== assets/views-03-01.js ===== */
 function valuationHTML(){
   const rows=valuationRows();
@@ -503,6 +506,7 @@ function valuationHTML(){
 }
 
 ;
+
 /* ===== assets/views-03-02.js ===== */
 function portfolioHTML(){
   const p=state.portfolio, {rows,cash,invested,total}=positionRows();
@@ -550,6 +554,7 @@ function portfolioHTML(){
 }
 
 ;
+
 /* ===== assets/views-03-03.js ===== */
 function eventsHTML(){
   const list=(state.events||[]).slice().sort((a,b)=>String(a.date||"").localeCompare(String(b.date||"")));
@@ -578,6 +583,7 @@ function queueHTML(){
 }
 
 ;
+
 /* ===== assets/views-04-01.js ===== */
 function logHTML(){
   const secOpts='<option value="Macro">Macro</option>'+SECTORS.map(s=>'<option value="'+esc(s.name)+'">'+esc(s.name)+'</option>').join("");
@@ -629,6 +635,7 @@ function sourcesHTML(){
 }
 
 ;
+
 /* ===== assets/views-04-02.js ===== */
 async function pullSource(i){
   const src=(state.sources||[])[i];
@@ -658,6 +665,7 @@ async function pullSource(i){
 }
 
 ;
+
 /* ===== assets/views-05.js ===== */
 function methodHTML(){
   return '<h2 class="section">How to run it</h2>'
@@ -851,6 +859,7 @@ function analysisHTML(){
 }
 
 ;
+
 /* ===== assets/views-master.js ===== */
 function masterDataHTML(){
   const m=initMasterState();
@@ -900,89 +909,4 @@ function masterDataHTML(){
     +'</tbody></table></div>';
 }
 
-
-function newsMaterialityClass(v){
-  const x=String(v||"").toLowerCase();
-  return x==="high"?"high":x==="medium"?"medium":"low";
-}
-function sourceTextForEvent(e){
-  const source=String(e.source||"").trim();
-  const sourceType=String(e.source_type||"").trim();
-  return [source,sourceType].filter(Boolean).join(" · ")||"—";
-}
-function newsHTML(){
-  const events=(initLiveState().events||[]).slice().sort((a,b)=>
-    String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
-  );
-  const official=events.filter(e=>String(e.source_type||"").toLowerCase()==="official").length;
-  const high=events.filter(e=>String(e.materiality||"").toLowerCase()==="high").length;
-  const cards=events.map(e=>{
-    const mat=String(e.materiality||"").toUpperCase()||"—";
-    return '<article class="newsitem">'
-      +'<div class="newsmeta"><span>'+esc(e.event_date||"—")+'</span><span>'+esc(e.event_type||e.entity_type||"Event")+'</span>'
-      +'<span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(mat)+'</span></div>'
-      +'<h3>'+esc(e.headline||"—")+'</h3>'
-      +'<p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p>'
-      +'<div class="newssource">'+esc(sourceTextForEvent(e))+'</div>'
-      +(e.required_action?'<div class="newsaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")
-      +'</article>';
-  }).join("");
-  return '<div class="pagehero compact"><div><div class="eyebrow">MARKET INTELLIGENCE</div><h2 class="section">News</h2>'
-    +'<p class="sub">Chronological PSX, macro, sector and company developments already captured by the research engine. Facts are shown before interpretation.</p></div>'
-    +'<div class="factbar"><span class="factpill"><b>'+fmtSmart(events.length)+'</b>Events</span>'
-    +'<span class="factpill"><b>'+fmtSmart(official)+'</b>Official-source</span>'
-    +'<span class="factpill"><b>'+fmtSmart(high)+'</b>High materiality</span></div></div>'
-    +(cards||'<p class="empty">No research events have been ingested yet.</p>');
-}
-
-function analysisImpactColumn(title,field,events){
-  const rows=events.filter(e=>String(e[field]||"").trim()).slice(0,5);
-  return '<div class="analysispanel"><div class="analysislabel">'+esc(title)+'</div>'
-    +(rows.length?rows.map(e=>'<div class="impactrow"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong><span>'+esc(e[field])+'</span></div>').join("")
-      :'<p class="empty">—</p>')+'</div>';
-}
-function analysisHTML(){
-  const live=initLiveState();
-  const events=(live.events||[]).slice().sort((a,b)=>
-    String(b.event_date||b.timestamp_pkt||"").localeCompare(String(a.event_date||a.timestamp_pkt||""))
-  );
-  const macro=(live.macro||[]).slice();
-  const sectors=(initMasterState().sectors||[]).slice();
-  const latestFacts=events.slice(0,5);
-  const actions=events.filter(e=>String(e.required_action||"").trim()).slice(0,6);
-  const macroCards=macro.slice(0,8).map(m=>
-    '<div class="analysisstat"><span>'+esc(m.indicator||"—")+'</span><strong>'+fmtSmart(m.latest_value)+'</strong>'
-      +'<small>'+esc([m.unit,m.period].filter(Boolean).join(" · ")||"")+'</small></div>'
-  ).join("");
-  const factRows=latestFacts.map(e=>
-    '<div class="factinterpret"><div><span class="analysislabel">FACT</span><strong>'+esc(e.headline||"—")+'</strong><p>'+esc(e.fact_summary||"—")+'</p>'
-      +'<small>'+esc(sourceTextForEvent(e))+'</small></div>'
-      +'<div><span class="analysislabel">INTERPRETATION</span><p>'+esc(e.what_changed||e.analyst_note||"—")+'</p></div></div>'
-  ).join("");
-  const sectorRows=sectors.filter(s=>s.sector_view||s.earnings_direction||s.risks||s.catalysts).slice(0,12).map(s=>
-    '<tr><td class="pad"><strong>'+esc(s.sector||"—")+'</strong></td>'
-      +'<td class="pad">'+esc(s.regime||"—")+'</td>'
-      +'<td class="pad">'+esc(s.earnings_direction||"—")+'</td>'
-      +'<td class="pad">'+esc(s.sector_view||"—")+'</td>'
-      +'<td class="pad">'+esc(s.catalysts||"—")+'</td>'
-      +'<td class="pad">'+esc(s.risks||"—")+'</td></tr>'
-  ).join("");
-  return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
-    +'<p class="sub">The same decision structure used in the scheduled PSX desk: verified facts first, then interpretation, earnings/valuation/risk impact, and what needs to be checked next.</p></div></div>'
-    +'<div class="sectionline"><h3 class="block">Market & macro snapshot</h3><span>Verified database inputs</span></div>'
-    +'<div class="analysisstats">'+(macroCards||'<p class="empty">No macro data available.</p>')+'</div>'
-    +'<div class="sectionline"><h3 class="block">Facts vs interpretation</h3><span>Latest material developments</span></div>'
-    +(factRows||'<p class="empty">No research events available.</p>')
-    +'<div class="sectionline"><h3 class="block">Investment transmission</h3><span>How new facts reach the model</span></div>'
-    +'<div class="analysisgrid">'
-      +analysisImpactColumn("Earnings impact","earnings_impact",events)
-      +analysisImpactColumn("Valuation impact","valuation_impact",events)
-      +analysisImpactColumn("Risk impact","risk_impact",events)
-    +'</div>'
-    +'<div class="sectionline"><h3 class="block">Sector desk</h3><span>Current research framework</span></div>'
-    +'<div class="scroll"><table><thead><tr><th>Sector</th><th>Regime</th><th>Earnings</th><th>Current view</th><th>Catalysts</th><th>Risks</th></tr></thead><tbody>'
-      +(sectorRows||'<tr><td class="pad empty" colspan="6">Sector analysis has not been populated yet.</td></tr>')+'</tbody></table></div>'
-    +'<div class="sectionline"><h3 class="block">What to do next</h3><span>Research actions, not trading instructions</span></div>'
-    +(actions.length?actions.map(e=>'<div class="queue warn"><strong>'+esc(e.ticker_sector||e.entity_type||"Market")+'</strong><span class="why">'+esc(e.required_action)+'</span><span class="act">'+esc(e.event_date||"")+'</span></div>').join("")
-      :'<p class="empty">No outstanding research actions recorded.</p>');
-}
+;
