@@ -1,1 +1,139 @@
-<!DOCTYPE html><html lang="en" data-theme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><script>try{  const savedTheme=localStorage.getItem("psx-theme");  if(savedTheme==="dark"||savedTheme==="light") document.documentElement.setAttribute("data-theme",savedTheme);}catch(e){}</script><title>PSX Sector Desk</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script><script src="config.js?v=auth-recovery-fix-20260919"></script><link rel="stylesheet" href="styles.css?v=kse-chart-20260920d"><style>[hidden]{display:none!important}</style></head><body><div id="gate" class="gate" hidden>  <div class="gatebox">    <h1>PSX Desk</h1>    <p>Sign in to open your private research portal.</p>    <div class="field"><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>    <div class="field"><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>    <div class="gaterow" id="standardAuthActions"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp" hidden>Create account</button><button class="btn" id="forgotPw">Forgot password</button></div>    <div id="recoveryBox" hidden>      <div class="field"><label for="newPw">New password</label><input type="password" id="newPw" autocomplete="new-password"></div>      <div class="gaterow"><button class="btn primary" id="setNewPw">Set new password</button></div>    </div>    <p class="gatemsg" id="gateMsg"></p>  </div></div><div class="shell" id="app" hidden>  <nav class="rail" aria-label="Sections">    <div class="brand"><h1>PSX Desk</h1><p>Investment & trading research</p></div>    <div class="workspace-switch rail-workspace" aria-label="Workspace">      <button class="workspacebtn" data-workspace-switch="investing">Investing</button>      <button class="workspacebtn" data-workspace-switch="trading">Trading</button>    </div>    <div data-workspace-panel="investing">      <div class="navgroup"><h2>Investing</h2>        <button class="navbtn" data-nav="dash">Dashboard</button>        <button class="navbtn" data-nav="news">News</button>        <button class="navbtn" data-nav="analysis">Analysis</button>        <button class="navbtn" data-nav="macro">Macro</button>      </div>      <div class="navgroup"><h2>Sectors</h2><div id="sectorNav"></div></div>      <div class="navgroup"><h2>Research</h2>        <button class="navbtn" data-nav="companies">Companies</button>        <button class="navbtn" data-nav="masters">Master data</button>        <button class="navbtn" data-nav="valuation">Valuation</button>        <button class="navbtn" data-nav="portfolio">Portfolio</button>        <button class="navbtn" data-nav="events">Events</button>        <button class="navbtn" data-nav="log">Decision log</button>      </div>      <div class="navgroup">        <button class="navbtn" data-nav="sources">Sources</button>        <button class="navbtn" data-nav="method">How to run it</button>      </div>    </div>    <div data-workspace-panel="trading" hidden>
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+try{
+  const savedTheme=localStorage.getItem("psx-theme");
+  if(savedTheme==="dark"||savedTheme==="light") document.documentElement.setAttribute("data-theme",savedTheme);
+}catch(e){}
+</script>
+<title>PSX Sector Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js?v=auth-recovery-fix-20260919"></script>
+<link rel="stylesheet" href="styles.css?v=kse-chart-20260920d">
+<style>[hidden]{display:none!important}</style>
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <div class="gatebox">
+    <h1>PSX Desk</h1>
+    <p>Sign in to open your private research portal.</p>
+    <div class="field"><label for="email">Email</label><input type="text" id="email" autocomplete="username"></div>
+    <div class="field"><label for="pw">Password</label><input type="password" id="pw" autocomplete="current-password"></div>
+    <div class="gaterow" id="standardAuthActions"><button class="btn primary" id="signIn">Sign in</button><button class="btn" id="signUp" hidden>Create account</button><button class="btn" id="forgotPw">Forgot password</button></div>
+    <div id="recoveryBox" hidden>
+      <div class="field"><label for="newPw">New password</label><input type="password" id="newPw" autocomplete="new-password"></div>
+      <div class="gaterow"><button class="btn primary" id="setNewPw">Set new password</button></div>
+    </div>
+    <p class="gatemsg" id="gateMsg"></p>
+  </div>
+</div>
+<div class="shell" id="app" hidden>
+  <nav class="rail" aria-label="Sections">
+    <div class="brand"><h1>PSX Desk</h1><p>Investment & trading research</p></div>
+    <div class="workspace-switch rail-workspace" aria-label="Workspace">
+      <button class="workspacebtn" data-workspace-switch="investing">Investing</button>
+      <button class="workspacebtn" data-workspace-switch="trading">Trading</button>
+    </div>
+    <div data-workspace-panel="investing">
+      <div class="navgroup"><h2>Investing</h2>
+        <button class="navbtn" data-nav="dash">Dashboard</button>
+        <button class="navbtn" data-nav="news">News</button>
+        <button class="navbtn" data-nav="analysis">Analysis</button>
+        <button class="navbtn" data-nav="macro">Macro</button>
+      </div>
+      <div class="navgroup"><h2>Sectors</h2><div id="sectorNav"></div></div>
+      <div class="navgroup"><h2>Research</h2>
+        <button class="navbtn" data-nav="companies">Companies</button>
+        <button class="navbtn" data-nav="masters">Master data</button>
+        <button class="navbtn" data-nav="valuation">Valuation</button>
+        <button class="navbtn" data-nav="portfolio">Portfolio</button>
+        <button class="navbtn" data-nav="events">Events</button>
+        <button class="navbtn" data-nav="log">Decision log</button>
+      </div>
+      <div class="navgroup">
+        <button class="navbtn" data-nav="sources">Sources</button>
+        <button class="navbtn" data-nav="method">How to run it</button>
+      </div>
+    </div>
+    <div data-workspace-panel="trading" hidden>
+      <div class="navgroup"><h2>Trading</h2>
+        <button class="navbtn" data-nav="trade-dash">Trading desk</button>
+        <button class="navbtn" data-nav="trade-scanner">Scanner</button>
+        <button class="navbtn" data-nav="trade-setups">Setups</button>
+        <button class="navbtn" data-nav="trade-watchlist">Watchlist</button>
+        <button class="navbtn" data-nav="trade-journal">Trade journal</button>
+      </div>
+      <div class="navgroup"><h2>Reference</h2>
+        <button class="navbtn" data-nav="news">Catalysts / news</button>
+        <button class="navbtn" data-nav="companies">Company lookup</button>
+      </div>
+    </div>
+  </nav>
+  <div class="main">
+    <div id="banner"></div>
+    <section class="live-news-ticker" id="liveNewsTicker" aria-label="Live market news" aria-live="polite">
+      <div class="ticker-label"><span class="ticker-pulse" aria-hidden="true"></span><strong>LIVE</strong></div>
+      <div class="ticker-window"><div class="ticker-track"><span class="ticker-loading">Loading latest verified news…</span></div></div>
+      <div class="ticker-actions">
+        <button class="ticker-open" type="button" data-nav="news" aria-label="Open all news">All news</button>
+        <button class="ticker-signout" type="button" id="signOut">Sign out</button>
+      </div>
+    </section>
+    <div class="topbar">
+      <div class="workspace-switch top-workspace" aria-label="Workspace">
+        <button class="workspacebtn" data-workspace-switch="investing">Investing</button>
+        <button class="workspacebtn" data-workspace-switch="trading">Trading</button>
+      </div>
+      <div class="topnav" aria-label="Primary navigation" data-workspace-panel="investing">
+        <button class="topnavbtn" data-nav="dash">Dashboard</button>
+        <button class="topnavbtn" data-nav="news">News</button>
+        <button class="topnavbtn" data-nav="analysis">Analysis</button>
+        <button class="topnavbtn" data-nav="companies">Companies</button>
+        <button class="topnavbtn" data-nav="macro">Macro</button>
+        <button class="topnavbtn" data-nav="valuation">Valuation</button>
+        <button class="topnavbtn" data-nav="portfolio">Portfolio</button>
+      </div>
+      <div class="topnav trading-topnav" aria-label="Trading navigation" data-workspace-panel="trading" hidden>
+        <button class="topnavbtn" data-nav="trade-dash">Trading desk</button>
+        <button class="topnavbtn" data-nav="trade-scanner">Scanner</button>
+        <button class="topnavbtn" data-nav="trade-setups">Setups</button>
+        <button class="topnavbtn" data-nav="trade-watchlist">Watchlist</button>
+        <button class="topnavbtn" data-nav="trade-journal">Journal</button>
+      </div>
+      <div class="topbar-tools">
+        <div class="globalsearch" id="globalSearchWrap">
+          <input id="globalSearch" type="search" autocomplete="off" placeholder="Search ticker" aria-label="Search PSX companies" data-guest-enabled>
+          <div class="searchresults" id="globalSearchResults" hidden></div>
+        </div>
+        <div class="top-actions" aria-label="Portal actions">
+          <button class="btn small" id="themeBtn">Dark mode</button>
+          <button class="btn small" id="exportBtn" hidden>Export</button>
+          <button class="btn small" id="importBtn">Import</button>
+        </div>
+      </div>
+      <span class="status" id="status" hidden>Loading</span>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <div class="cmd" id="cmd" hidden>
+      <div class="cmdrow">
+        <textarea id="cmdInput" rows="1" placeholder="Say what changed — &quot;August cement dispatches 4.1mn tonnes, coal $104&quot;"></textarea>
+        <button class="btn primary" id="cmdSend">Fill in</button>
+      </div>
+      <p class="cmdhint">Plain sentences, a pasted note, or your phone's dictation. It works out where each number goes and shows you before saving.</p>
+      <div id="cmdOut"></div>
+    </div>
+    <div class="view" id="view"></div>
+  </div>
+</div>
+
+<script src="bundle-core.js?v=auth-recovery-fix-20260919"></script>
+<script src="bundle-views.js?v=kse-chart-20260920d"></script>
+<script src="bundle-runtime.js?v=kse-chart-20260920d"></script>
+</body>
+</html>
