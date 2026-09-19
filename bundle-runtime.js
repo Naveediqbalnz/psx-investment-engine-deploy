@@ -327,7 +327,29 @@ async function startApp(sess){
     return;
   }
   sb = window.supabase.createClient(CONFIG.supabaseUrl, browserKey);
+  const recoveryMode = location.hash.indexOf("type=recovery")>=0 || location.search.indexOf("type=recovery")>=0;
   const { data } = await sb.auth.getSession();
+
+  if(recoveryMode && data && data.session){
+    $("#gate").hidden=false;
+    $("#standardAuthActions").hidden=true;
+    $("#recoveryBox").hidden=false;
+    $("#email").parentElement.hidden=true;
+    $("#pw").parentElement.hidden=true;
+    gateMsg("Enter a new password for your PSX account.");
+    $("#setNewPw").onclick=async()=>{
+      const password=$("#newPw").value;
+      if(!password || password.length<8){ gateMsg("Use at least 8 characters."); return; }
+      gateMsg("Updating password…");
+      const { error } = await sb.auth.updateUser({ password });
+      if(error){ gateMsg(error.message); return; }
+      history.replaceState({}, document.title, location.pathname);
+      gateMsg("Password updated. Opening your research file…");
+      await startApp(data.session);
+    };
+    return;
+  }
+
   if(data && data.session){ await startApp(data.session); return; }
   $("#gate").hidden=false;
   $("#signIn").onclick=async()=>{
@@ -344,6 +366,14 @@ async function startApp(sess){
     if(error){ gateMsg(error.message); return; }
     if(d.session){ await startApp(d.session); }
     else gateMsg("Check your email to confirm the address, then sign in.");
+  };
+  $("#forgotPw").onclick=async()=>{
+    const email=$("#email").value.trim();
+    if(!email){ gateMsg("Enter your email address first."); $("#email").focus(); return; }
+    gateMsg("Sending password reset email…");
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+    if(error){ gateMsg(error.message); return; }
+    gateMsg("Password reset email sent. Check Inbox and Spam, then open the link.");
   };
   $("#pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#signIn").click(); });
 })();
