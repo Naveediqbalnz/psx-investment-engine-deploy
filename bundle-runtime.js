@@ -394,26 +394,6 @@ $("#importFile").onchange=e=>{ const f=e.target.files[0]; if(f) importJSON(f); e
 $("#signOut").onclick=async()=>{ await sb.auth.signOut(); location.reload(); };
 
 function gateMsg(t){ $("#gateMsg").textContent=t||""; }
-function applyGuestReadOnly(){
-  document.body.classList.add("guest-readonly");
-  ["#importBtn","#importFile","#exportBtn","#signOut"].forEach(sel=>{ const el=$(sel); if(el) el.hidden=true; });
-  document.querySelectorAll("input, textarea, select").forEach(el=>{ if(!el.hasAttribute("data-guest-enabled")) el.disabled=true; });
-  document.querySelectorAll("[id^='add'], [data-delrow], [data-delco], [data-delfy], [data-delpos], [data-delev], [data-delsrc], [data-pull]").forEach(el=>{ el.hidden=true; });
-}
-async function startGuestApp(){
-  session = null;
-  $("#gate").hidden = true;
-  $("#app").hidden = false;
-  setStatus("Loading live data…","saving");
-  await loadMasterData();
-  await loadLiveResearchData();
-  renderNav(); render();
-  applyGuestReadOnly();
-  const observer=new MutationObserver(()=>applyGuestReadOnly());
-  observer.observe($("#view"),{childList:true,subtree:true});
-  setStatus("Temporary read-only access");
-  $("#cmd").hidden = true;
-}
 async function startApp(sess){
   session = sess;
   $("#gate").hidden = true;
@@ -442,15 +422,8 @@ async function startApp(sess){
   }
 
   $("#gate").hidden=false;
-  gateMsg("Checking sign-in link…");
+  gateMsg("Checking sign-in…");
   sb = window.supabase.createClient(CONFIG.supabaseUrl, browserKey);
-
-  // Temporary read-only guest mode. Database permissions remain enforced by RLS.
-  const TEMP_GUEST_MODE = true;
-  if(TEMP_GUEST_MODE){
-    await startGuestApp();
-    return;
-  }
 
   let recoveryActive=false;
   function showRecovery(sess){
@@ -468,15 +441,10 @@ async function startApp(sess){
   const hashParams=new URLSearchParams((location.hash||"").replace(/^#/,""));
   const queryParams=new URLSearchParams(location.search||"");
   const linkError=hashParams.get("error_description") || queryParams.get("error_description");
-  if(linkError){
-    $("#gate").hidden=false;
-    gateMsg(decodeURIComponent(linkError.replace(/\+/g," ")));
-  }
+  if(linkError) gateMsg(decodeURIComponent(linkError.replace(/\+/g," ")));
 
   sb.auth.onAuthStateChange((event,sess)=>{
-    if(event==="PASSWORD_RECOVERY"){
-      showRecovery(sess);
-    }
+    if(event==="PASSWORD_RECOVERY") showRecovery(sess);
   });
 
   $("#setNewPw").onclick=async()=>{
@@ -486,24 +454,18 @@ async function startApp(sess){
     const { error } = await sb.auth.updateUser({ password });
     if(error){ gateMsg(error.message); return; }
     history.replaceState({}, document.title, location.pathname);
-    gateMsg("Password updated. Opening your research file…");
     const { data:d } = await sb.auth.getSession();
     if(d && d.session) await startApp(d.session);
   };
 
   const { data } = await sb.auth.getSession();
-
   const recoveryHint =
     hashParams.get("type")==="recovery" ||
     queryParams.get("type")==="recovery" ||
     queryParams.get("recovery")==="1";
 
-  if(recoveryHint && data && data.session){
-    showRecovery(data.session);
-    return;
-  }
+  if(recoveryHint && data && data.session){ showRecovery(data.session); return; }
 
-  // Give the auth client a brief moment to emit PASSWORD_RECOVERY after parsing the URL.
   if(data && data.session){
     await new Promise(resolve=>setTimeout(resolve,120));
     if(recoveryActive) return;
@@ -511,35 +473,31 @@ async function startApp(sess){
     return;
   }
 
-  if(recoveryActive) return;
   gateMsg("");
-
   $("#signIn").onclick=async()=>{
     gateMsg("Signing in…");
     const { data:d, error } = await sb.auth.signInWithPassword({
-      email:$("#email").value.trim(), password:$("#pw").value });
+      email:$("#email").value.trim(), password:$("#pw").value
+    });
     if(error){ gateMsg(error.message); return; }
     await startApp(d.session);
   };
 
   $("#signUp").onclick=async()=>{
-    gateMsg("Creating account…");
-    const { data:d, error } = await sb.auth.signUp({
-      email:$("#email").value.trim(), password:$("#pw").value });
-    if(error){ gateMsg(error.message); return; }
-    if(d.session){ await startApp(d.session); }
-    else gateMsg("Check your email to confirm the address, then sign in.");
+    gateMsg("Account creation is disabled for this private portal.");
   };
 
   $("#forgotPw").onclick=async()=>{
     const email=$("#email").value.trim();
     if(!email){ gateMsg("Enter your email address first."); $("#email").focus(); return; }
     gateMsg("Sending password reset email…");
-    const redirectTo = location.origin + "/?recovery=1";
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+    const redirectTo=location.origin+"/?recovery=1";
+    const { error } = await sb.auth.resetPasswordForEmail(email,{redirectTo});
     if(error){ gateMsg(error.message); return; }
-    gateMsg("Password reset email sent. Open the newest email link. Older reset links may expire.");
+    gateMsg("Password reset email sent. Open the newest reset link.");
   };
 
-  $("#pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#signIn").click(); });
+  $("#pw").addEventListener("keydown",e=>{if(e.key==="Enter") $("#signIn").click();});
 })();
+
+;
