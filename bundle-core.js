@@ -111,7 +111,19 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const key = s => s.toLowerCase().replace(/[^a-z0-9]+/g,"_");
 const num = v => { const n = parseFloat(String(v==null?"":v).replace(/[, ]/g,"")); return isFinite(n)?n:null; };
-const fmt = (n,d) => n===null||n===undefined?"—":Number(n).toLocaleString(undefined,{minimumFractionDigits:d||0,maximumFractionDigits:d||0});
+const fmt = (n,d=0) => {
+  const x=num(n);
+  return x===null?"—":x.toLocaleString("en-US",{minimumFractionDigits:d,maximumFractionDigits:d});
+};
+const fmtSmart = (v,maxDecimals=4) => {
+  if(v===null||v===undefined||String(v).trim()==="") return "—";
+  const raw=String(v).trim().replace(/,/g,"");
+  if(!/^-?\d+(?:\.\d+)?$/.test(raw)) return esc(v);
+  const x=Number(raw);
+  if(!Number.isFinite(x)) return esc(v);
+  const decimals=raw.includes(".")?Math.min(raw.split(".")[1].length,maxDecimals):0;
+  return x.toLocaleString("en-US",{minimumFractionDigits:decimals,maximumFractionDigits:decimals});
+};
 const pct = n => n===null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
 const daysSince = ts => ts? Math.floor((Date.now()-ts)/86400000):null;
 const ageClass = d => d===null?"":d<=35?"fresh":d<=75?"aging":"stale";
