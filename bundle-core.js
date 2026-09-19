@@ -499,7 +499,7 @@ function renderNav(){
     return '<button class="navbtn" data-nav="sector" data-id="'+s.id+'"><span class="dot '+ageClass(d)+'"></span>'
       +'<span>'+esc(s.short)+'</span><span class="age">'+(d===null?"—":d+"d")+'</span></button>';
   }).join("");
-  document.querySelectorAll(".navbtn").forEach(b=>{
+  document.querySelectorAll(".navbtn,.topnavbtn").forEach(b=>{
     const on = b.dataset.nav===route.view && (b.dataset.nav!=="sector"||b.dataset.id===route.id);
     b.setAttribute("aria-current", on?"true":"false");
   });
