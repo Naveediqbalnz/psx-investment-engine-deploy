@@ -333,3 +333,21 @@ tbody tr:hover td{background:color-mix(in srgb,var(--accent-soft) 48%,transparen
 .textbtn{border:0;background:none;color:var(--accent);font:inherit;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;cursor:pointer;padding:0}
 @media(max-width:1100px){.decisiongrid{grid-template-columns:repeat(2,1fr)}.marketstrip{grid-template-columns:repeat(3,1fr)}.globalsearch{order:2;flex-basis:100%;max-width:none;width:100%}}
 @media(max-width:700px){.dailyfeed{grid-template-columns:1fr}.marketstrip{grid-template-columns:repeat(2,1fr)}.decisiongrid{grid-template-columns:1fr 1fr}.searchresult{grid-template-columns:54px 1fr}.searchresult small{display:none}}
+
+
+/* ===== interactive analysis launcher ===== */
+.analysisrunmeta{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:10px 13px;min-width:170px;box-shadow:var(--shadow-sm)}
+.analysisrunmeta span,.analysisrunmeta small{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3)}
+.analysisrunmeta strong{display:block;font-family:var(--serif);font-size:17px;font-weight:500;margin:2px 0}
+.analysislauncher{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.analysisrun{font:inherit;text-align:left;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:11px 12px;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .12s ease,border-color .12s ease}
+.analysisrun:hover{transform:translateY(-1px);border-color:var(--accent)}.analysisrun.active{background:var(--accent-soft);border-color:var(--accent)}
+.analysisrun span{display:block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.analysisrun strong{display:block;font-size:12.5px;margin:3px 0}.analysisrun small{display:block;font-size:10.5px;color:var(--ink-3)}
+.analysisrun:disabled{opacity:.65;cursor:wait}
+.riskgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px;margin-top:10px}
+.riskcard{background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:13px 14px;box-shadow:var(--shadow-sm)}
+.riskcard>div{display:flex;gap:7px;align-items:center}.riskcard small{font-size:9.5px;color:var(--ink-3)}
+.riskcard strong{display:block;font-family:var(--serif);font-size:16px;font-weight:500;margin:7px 0 4px}.riskcard p{font-size:11.5px;color:var(--ink-2);margin:0}.riskcard em{display:block;font-style:normal;color:var(--accent);font-size:10.5px;margin-top:8px;padding-top:7px;border-top:1px solid var(--rule)}
+@media(max-width:900px){.analysislauncher{grid-template-columns:repeat(2,1fr)}.riskgrid{grid-template-columns:1fr}}
+@media(max-width:600px){.analysislauncher{grid-template-columns:1fr}.analysisrunmeta{width:100%}}
