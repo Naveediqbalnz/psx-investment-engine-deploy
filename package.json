@@ -1,0 +1,12 @@
+{
+  "name": "psx-investment-engine-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deployment-only static bundle for PSX Investment Engine",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
