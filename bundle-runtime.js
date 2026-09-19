@@ -346,10 +346,21 @@ async function importJSON(file){
 }
 
 /* ===================== boot ===================== */
+function syncThemeButton(){
+  const btn=$("#themeBtn");
+  if(!btn) return;
+  const cur=document.documentElement.getAttribute("data-theme")||"light";
+  btn.textContent=cur==="dark"?"Light mode":"Dark mode";
+  btn.setAttribute("aria-label",cur==="dark"?"Switch to light mode":"Switch to dark mode");
+}
 $("#themeBtn").onclick=()=>{
-  const cur=document.documentElement.getAttribute("data-theme");
-  document.documentElement.setAttribute("data-theme", cur==="dark"?"light":cur==="light"?"dark":"light");
+  const cur=document.documentElement.getAttribute("data-theme")||"light";
+  const next=cur==="dark"?"light":"dark";
+  document.documentElement.setAttribute("data-theme",next);
+  try{localStorage.setItem("psx-theme",next);}catch(e){}
+  syncThemeButton();
 };
+syncThemeButton();
 $("#exportBtn").onclick=exportJSON;
 $("#exportBtn").hidden=false;
 $("#importBtn").onclick=()=>$("#importFile").click();
