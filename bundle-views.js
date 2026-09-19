@@ -1415,26 +1415,81 @@ function tradingHero(title,sub){
   return '<div class="tradehero"><div><div class="eyebrow">TRADING WORKSPACE</div><h2 class="section">'+esc(title)+'</h2><p class="sub">'+esc(sub)+'</p></div>'
     +'<div class="tradebadge"><span>Market-data mode</span><strong>Snapshot / research only</strong><small>No unverified live signals</small></div></div>';
 }
-function tradingDashHTML(){
-  const master=initMasterState(), live=initLiveState();
-  const priced=tradingSnapshotRows(), events=tradingCatalystEvents();
-  const latestDate=priced.length?priced[0].price_date:null;
-  const latestEvents=events.slice(0,5).map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.ticker_sector||e.entity_type||"Market")+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p></article>').join("");
-  return tradingHero("Trading desk","Short-term workflow kept separate from long-term fundamental investing. Technical signals remain blank until sufficient verified price and volume history is connected.")
-    +'<div class="tradegrid">'
-      +'<div class="tradecard tradeready"><span>Universe</span><strong>'+fmtSmart((master.companies||[]).length)+' companies</strong><p>PSX company master available.</p></div>'
-      +'<div class="tradecard tradeready"><span>Price snapshots</span><strong>'+fmtSmart(priced.length)+' companies</strong><p>Latest stored profile snapshot: '+fmtDate(latestDate)+'.</p></div>'
-      +'<div class="tradecard tradegap"><span>OHLCV history</span><strong>Not available</strong><p>Needed for moving averages, RSI, volume, ATR and candlestick setups.</p></div>'
-      +'<div class="tradecard tradegap"><span>Intraday feed</span><strong>Not connected</strong><p>No real-time trading signal will be fabricated.</p></div>'
-      +'<div class="tradecard tradeready"><span>Catalysts</span><strong>'+fmtSmart(events.length)+' events</strong><p>Research-event tape can support catalyst monitoring.</p></div>'
-      +'<div class="tradecard tradegap"><span>Trade journal</span><strong>Foundation ready</strong><p>Dedicated trading journal storage is the next build step.</p></div>'
+function tradingKseSnapshot(){
+  const live=initLiveState();
+  const macro=findMacro("KSE-100")||{};
+  const event=(live.events||[]).find(e=>String(e.headline||"").toUpperCase().includes("KSE-100"))||null;
+  let points=null,pctMove=null;
+  const text=String((event&&event.fact_summary)||"");
+  const up=text.match(/up\s+([\d,]+(?:\.\d+)?)\s+points\s+or\s+([\d.]+)%/i);
+  const down=text.match(/down\s+([\d,]+(?:\.\d+)?)\s+points\s+or\s+([\d.]+)%/i);
+  if(up){points=num(up[1]);pctMove=num(up[2]);}
+  else if(down){points=-Math.abs(num(down[1])||0);pctMove=-Math.abs(num(down[2])||0);}
+  return {
+    value:num(macro.latest_value),
+    period:macro.period||"",
+    source:macro.source_name||((event&&event.source)||""),
+    eventDate:(event&&event.event_date)||"",
+    points,pctMove
+  };
+}
+function tradingChartModeLabel(mode){
+  return ({price:"Price",volume:"Volume",returns:"Returns",relative:"Relative Strength",trading:"Trading Chart"})[mode]||"Price";
+}
+function tradingChartHTML(){
+  const kse=tradingKseSnapshot();
+  const modes=[["price","Price"],["volume","Volume"],["returns","Returns"],["relative","Relative Strength"],["trading","Trading Chart"]];
+  const ranges=["1D","1W","1M","3M","6M","YTD","1Y","3Y","5Y","All"];
+  const moveClass=kse.pctMove===null?"neutral":kse.pctMove>=0?"up":"down";
+  const moveText=kse.pctMove===null?"—":(kse.pctMove>=0?"+":"")+fmt(kse.pctMove,2)+"%";
+  const pointsText=kse.points===null?"—":(kse.points>=0?"+":"")+fmt(kse.points,2);
+  const mode=route.tradeChartMode||"price", range=route.tradeRange||"1M";
+  const historyNeed=mode==="trading"?"OHLCV / candlestick history":mode==="volume"?"volume history":mode==="returns"?"return history":mode==="relative"?"relative-strength history":"price history";
+  return '<section class="marketterminal">'
+    +'<div class="marketterminal-head"><div class="marketidentity"><div class="marketindexrow"><span class="indexbadge">KSE-100</span><span class="officialtag">Official PSX snapshot</span></div>'
+      +'<div class="marketlevel">'+(kse.value===null?"—":fmt(kse.value,2))+'</div>'
+      +'<div class="marketmove '+moveClass+'"><strong>'+moveText+'</strong><span>'+pointsText+' pts</span><small>'+fmtDate(kse.eventDate||kse.period)+'</small></div></div>'
+      +'<div class="marketterminal-meta"><div><span>Selected view</span><strong>'+esc(tradingChartModeLabel(mode))+'</strong></div>'
+      +'<div><span>Range</span><strong>'+esc(range)+'</strong></div>'
+      +'<div><span>Historical feed</span><strong class="missingtext">Not connected</strong></div></div></div>'
+    +'<div class="charttoolbar"><div class="chartmodes">'+modes.map(x=>'<button type="button" class="chartmodebtn" data-trade-chart-mode="'+x[0]+'" aria-current="'+(mode===x[0])+'">'+x[1]+'</button>').join("")+'</div>'
+      +'<div class="chartranges">'+ranges.map(x=>'<button type="button" class="chartrangebtn" data-trade-range="'+x+'" aria-current="'+(range===x)+'">'+x+'</button>').join("")+'</div></div>'
+    +'<div class="chartcanvas">'
+      +'<div class="chartgridlines" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>'
+      +'<div class="chartnodata"><div class="chartnodataicon">↗</div><strong>'+esc(tradingChartModeLabel(mode))+' chart is ready for data</strong>'
+        +'<p>Verified '+esc(historyNeed)+' is not connected for '+esc(range)+'. Nothing is interpolated or fabricated.</p>'
+        +'<span>Last verified KSE-100 close: '+(kse.value===null?"—":fmt(kse.value,2))+'</span></div>'
     +'</div>'
-    +'<div class="sectionline"><h3 class="block">Latest catalysts</h3><span>Research events, not trade signals</span></div>'
+    +'<div class="chartfooter"><span>Source: '+esc(kse.source||"—")+'</span><span>Last observation: '+fmtDate(kse.eventDate||kse.period)+'</span><span>Chart status: MISSING HISTORY</span></div>'
+  +'</section>';
+}
+function tradingMarketPanels(){
+  const panels=[
+    ["Market breadth","—","Advancers, decliners and unchanged require a breadth feed."],
+    ["Sector performance","—","1D / 1W / 1M sector returns require historical closes."],
+    ["Index contributors","—","Point contribution data is not stored yet."],
+    ["52-week participation","—","New highs and lows require daily history."],
+    ["Relative volume","—","Requires current and historical volume."],
+    ["Volatility / ATR","—","Requires verified OHLCV history."]
+  ];
+  return '<div class="trademarketgrid">'+panels.map(x=>'<div class="trademarketcard"><span>'+esc(x[0])+'</span><strong>'+esc(x[1])+'</strong><p>'+esc(x[2])+'</p></div>').join("")+'</div>';
+}
+function tradingDashHTML(){
+  const master=initMasterState(), events=tradingCatalystEvents(), priced=tradingSnapshotRows();
+  const latestEvents=events.slice(0,4).map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.ticker_sector||e.entity_type||"Market")+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p></article>').join("");
+  const snapshotRows=priced.slice(0,8).map(c=>'<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td><td class="pad">'+esc(c.company_name||"—")+'</td><td class="pad num">'+fmtSmart(c.last_price,2)+'</td><td class="pad">'+fmtDate(c.price_date)+'</td><td class="pad empty">—</td><td class="pad empty">—</td></tr>').join("");
+  return tradingHero("Trading desk","Market-terminal layout for short-term analysis. Blue is navigation; green/red are reserved for actual market direction.")
+    +tradingChartHTML()
+    +'<div class="sectionline"><h3 class="block">Market internals</h3><span>Designed now; populated only from verified feeds</span></div>'
+    +tradingMarketPanels()
+    +'<div class="sectionline"><h3 class="block">Snapshot monitor</h3><span>Dated prices, not live quotes</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th class="num">Snapshot price</th><th>Price date</th><th>Momentum</th><th>Rel. volume</th></tr></thead><tbody>'
+      +(snapshotRows||'<tr><td class="pad empty" colspan="6">No price snapshots available.</td></tr>')+'</tbody></table></div>'
+    +'<div class="sectionline"><h3 class="block">Latest catalysts</h3><span>Research events, not technical signals</span></div>'
     +(latestEvents||'<p class="empty">No research events available.</p>')
-    +'<div class="sectionline"><h3 class="block">Trading build order</h3><span>Required before automated setups</span></div>'
-    +'<div class="queue warn"><strong>1. Price history</strong><span class="why">Verified daily OHLCV with sufficient history for technical indicators.</span><span class="act">Data</span></div>'
-    +'<div class="queue warn"><strong>2. Scanner engine</strong><span class="why">Momentum, volume, breakout, support/resistance and volatility calculations.</span><span class="act">Engine</span></div>'
-    +'<div class="queue"><strong>3. Risk & journal</strong><span class="why">Entry, stop, target, position size, R-multiple and post-trade review.</span><span class="act">Workflow</span></div>';
+    +'<div class="sectionline"><h3 class="block">What unlocks the charts</h3><span>Next data-engine step</span></div>'
+    +'<div class="queue warn"><strong>Daily OHLCV history</strong><span class="why">Required for the price, volume, returns, relative-strength and candlestick views above.</span><span class="act">Data</span></div>'
+    +'<div class="queue"><strong>Market breadth & contributors</strong><span class="why">Required for breadth, sector leadership and index-contribution panels.</span><span class="act">Data</span></div>';
 }
 function tradingScannerHTML(){
   const rows=tradingSnapshotRows().slice(0,100).map(c=>'<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td><td class="pad">'+esc(c.company_name||"—")+'</td><td class="pad">'+esc(c.sector||"—")+'</td><td class="pad num">'+fmtSmart(c.last_price,2)+'</td><td class="pad">'+fmtDate(c.price_date)+'</td><td class="pad empty">—</td><td class="pad empty">—</td><td class="pad empty">—</td></tr>').join("");
