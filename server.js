@@ -36,7 +36,9 @@ http.createServer((req,res)=>{
       }
       const ext = path.extname(file).toLowerCase();
       res.setHeader("Content-Type", mime[ext] || "application/octet-stream");
-      if (path.basename(file)==="config.js") res.setHeader("Cache-Control","no-store");
+      res.setHeader("Cache-Control","no-store, no-cache, must-revalidate, max-age=0");
+      res.setHeader("Pragma","no-cache");
+      res.setHeader("Expires","0");
       res.writeHead(200);
       res.end(data);
     });
