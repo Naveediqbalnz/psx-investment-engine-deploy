@@ -11,6 +11,7 @@ function render(){
     r==="trade-dash"?tradingDashHTML(): r==="trade-scanner"?tradingScannerHTML():
     r==="trade-setups"?tradingSetupsHTML(): r==="trade-watchlist"?tradingWatchlistHTML():
     r==="trade-journal"?tradingJournalHTML(): methodHTML();
+  saveRoute();
   bind();
 }
 

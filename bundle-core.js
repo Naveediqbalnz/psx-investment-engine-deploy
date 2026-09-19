@@ -543,6 +543,41 @@ function renderNav(){
     b.setAttribute("aria-current", on?"true":"false");
   });
 }
+const ROUTE_STORAGE_KEY="psx-current-route";
+function saveRoute(){
+  try{
+    localStorage.setItem(ROUTE_STORAGE_KEY,JSON.stringify({
+      workspace:route.workspace,view:route.view,id:route.id,ticker:route.ticker,
+      tab:route.tab,companyTab:route.companyTab,analysisMode:route.analysisMode,
+      tradeChartMode:route.tradeChartMode,tradeRange:route.tradeRange,tradeTicker:route.tradeTicker
+    }));
+  }catch(err){}
+}
+function restoreRoute(){
+  try{
+    const saved=JSON.parse(localStorage.getItem(ROUTE_STORAGE_KEY)||"null");
+    if(!saved||typeof saved!=="object") return;
+    const allowed=new Set(["dash","news","analysis","macro","sector","companies","masters","company","valuation","portfolio","events","queue","log","sources","method","trade-dash","trade-scanner","trade-setups","trade-watchlist","trade-journal"]);
+    if(!allowed.has(saved.view)) return;
+    route.workspace=String(saved.view).startsWith("trade-")?"trading":"investing";
+    route.view=saved.view;
+    route.id=saved.id||null;
+    route.ticker=saved.ticker||null;
+    route.tab=saved.tab||route.tab;
+    route.companyTab=saved.companyTab||route.companyTab;
+    route.analysisMode=saved.analysisMode||route.analysisMode;
+    route.tradeChartMode=saved.tradeChartMode||route.tradeChartMode;
+    route.tradeRange=saved.tradeRange||route.tradeRange;
+    route.tradeTicker=cleanTicker(saved.tradeTicker)||route.tradeTicker;
+    if(route.view==="company"){
+      if(!route.ticker){route.view="companies";}
+      else ensureCompanyDetailFromMaster(route.ticker);
+    }
+    if(route.view==="sector"&&!SECTORS.some(s=>s.id===route.id)){
+      route.view="dash";route.id=null;
+    }
+  }catch(err){}
+}
 function go(view,id){
   if(String(view||"").startsWith("trade-")) route.workspace="trading";
   else if(["dash","news","analysis","macro","sector","companies","masters","company","valuation","portfolio","events","queue","log","sources","method"].includes(view)) route.workspace="investing";

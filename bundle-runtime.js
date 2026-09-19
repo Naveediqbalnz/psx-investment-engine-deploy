@@ -507,6 +507,7 @@ async function startApp(sess){
   await loadAll();
   await loadMasterData();
   await loadLiveResearchData();
+  restoreRoute();
   renderNav(); render();
   startLiveNewsTicker();
   setStatus("Live database connected");
