@@ -1036,6 +1036,84 @@ function fullDailyDeskResultHTML(live,master,events,macro){
     +'</section>';
 }
 
+
+function macroRatesResultHTML(live,events,macro){
+  const byName=name=>macro.find(m=>String(m.indicator||"").toLowerCase()===String(name||"").toLowerCase())||null;
+  const policy=byName("SBP Policy Rate");
+  const cpi=byName("CPI Inflation YoY");
+  const tbill=byName("12M T-Bill Cut-off Yield");
+  const pkr=byName("USD / PKR M2M");
+  const sbpRes=byName("SBP FX Reserves");
+  const totalRes=byName("Total FX Reserves");
+  const kse=byName("KSE-100");
+  const policyV=num(policy&&policy.latest_value), cpiV=num(cpi&&cpi.latest_value), tbillV=num(tbill&&tbill.latest_value);
+  const realPolicy=policyV!==null&&cpiV!==null?policyV-cpiV:null;
+  const realTbill=tbillV!==null&&cpiV!==null?tbillV-cpiV:null;
+  const macroEvents=events.filter(e=>String(e.entity_type||"").toLowerCase()==="macro");
+  const actions=macroEvents.filter(e=>String(e.required_action||"").trim());
+
+  const keyCards=[
+    ["Policy rate",policyV,policy&&policy.unit,policy&&policy.change_value,policy&&policy.release_date],
+    ["CPI YoY",cpiV,cpi&&cpi.unit,cpi&&cpi.change_value,cpi&&cpi.release_date],
+    ["12M T-bill",tbillV,tbill&&tbill.unit,tbill&&tbill.change_value,tbill&&tbill.release_date],
+    ["USD / PKR",num(pkr&&pkr.latest_value),pkr&&pkr.unit,pkr&&pkr.change_value,pkr&&pkr.release_date],
+    ["SBP FX reserves",num(sbpRes&&sbpRes.latest_value),sbpRes&&sbpRes.unit,sbpRes&&sbpRes.change_value,sbpRes&&sbpRes.release_date],
+    ["KSE-100",num(kse&&kse.latest_value),kse&&kse.unit,kse&&kse.change_value,kse&&kse.release_date]
+  ].map(x=>'<div class="macrokpi"><span>'+esc(x[0])+'</span><strong>'+fmtSmart(x[1])+'</strong><small>'+esc(x[2]||"")+'</small><em>'+esc(x[3]||"—")+'</em><b>'+fmtDate(x[4])+'</b></div>').join("");
+
+  const indicatorRows=macro.map(m=>
+    '<tr><td class="pad"><strong>'+esc(m.indicator||"—")+'</strong><br><small>'+esc(m.category||"—")+'</small></td>'
+      +'<td class="pad num">'+fmtSmart(m.latest_value)+'</td>'
+      +'<td class="pad num">'+fmtSmart(m.previous_value)+'</td>'
+      +'<td class="pad">'+esc(m.change_value||"—")+'</td>'
+      +'<td class="pad">'+esc(m.period||"—")+'</td>'
+      +'<td class="pad">'+fmtDate(m.release_date)+'</td>'
+      +'<td class="pad"><span class="macrostatus '+esc(String(m.status||"").toLowerCase())+'">'+esc(String(m.status||"—").toUpperCase())+'</span></td>'
+      +'<td class="pad">'+(safeHttpsUrl(m.source_url)?'<a href="'+esc(safeHttpsUrl(m.source_url))+'" target="_blank" rel="noreferrer">'+esc(m.source_name||"Source")+'</a>':esc(m.source_name||"—"))+'</td></tr>'
+  ).join("");
+
+  const transmissionRows=macro.map(m=>
+    '<div class="macrotrans"><div><span>'+esc(m.category||"Macro")+'</span><strong>'+esc(m.indicator||"—")+'</strong></div>'
+      +'<p>'+esc(m.investment_relevance||"—")+'</p>'
+      +'<small><b>Affected:</b> '+esc(m.affected_sectors||"—")+'</small>'
+      +'<small><b>Signal:</b> '+esc(m.threshold_signal||"—")+'</small></div>'
+  ).join("");
+
+  const eventRows=macroEvents.map(e=>
+    '<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.event_type||"Macro")+'</span><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span></div>'
+      +'<h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||"—")+'</p>'
+      +'<div class="macroimpactgrid"><div><b>What changed</b><span>'+esc(e.what_changed||"—")+'</span></div><div><b>Earnings</b><span>'+esc(e.earnings_impact||"—")+'</span></div><div><b>Valuation</b><span>'+esc(e.valuation_impact||"—")+'</span></div><div><b>Risk</b><span>'+esc(e.risk_impact||"—")+'</span></div></div>'
+      +(e.required_action?'<div class="newsaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")
+      +'<div class="newssource">'+esc(sourceTextForEvent(e))+'</div></article>'
+  ).join("");
+
+  const actionRows=actions.map(e=>
+    '<div class="queue warn"><strong>'+esc(e.event_type||"Macro")+'</strong><span class="why">'+esc(e.required_action)+'</span><span class="act">'+fmtDate(e.event_date)+'</span></div>'
+  ).join("");
+
+  return '<section class="analysisresult">'
+    +'<div class="resulthead"><div><span class="analysislabel">RUN RESULT</span><h3>Macro & Rates</h3><p>Latest macro, rates and market-regime inputs currently stored in the research database.</p></div>'
+      +'<div class="runstamp"><span>Completed</span><strong>'+fmtDate(route.analysisRanAt||todayISO())+'</strong></div></div>'
+    +'<div class="macrokpis">'+keyCards+'</div>'
+    +'<div class="sectionline"><h3 class="block">Derived rate context</h3><span>Calculated from stored official inputs</span></div>'
+    +'<div class="bank-kpis four">'
+      +'<div class="kpi"><div class="k">Policy less CPI</div><div class="v '+(realPolicy===null?"na":realPolicy>=0?"pos":"neg")+'">'+(realPolicy===null?"—":(realPolicy>=0?"+":"")+fmt(realPolicy,2)+"pp")+'</div><div class="meta">Simple nominal spread, not a forward real rate</div></div>'
+      +'<div class="kpi"><div class="k">12M T-bill less CPI</div><div class="v '+(realTbill===null?"na":realTbill>=0?"pos":"neg")+'">'+(realTbill===null?"—":(realTbill>=0?"+":"")+fmt(realTbill,2)+"pp")+'</div><div class="meta">Simple nominal spread</div></div>'
+      +'<div class="kpi"><div class="k">Policy vs T-bill</div><div class="v">'+(policyV!==null&&tbillV!==null?fmt(tbillV-policyV,2)+"pp":"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Total / SBP reserves</div><div class="v">'+(num(totalRes&&totalRes.latest_value)!==null&&num(sbpRes&&sbpRes.latest_value)!==null?fmt(num(totalRes.latest_value)-num(sbpRes.latest_value),1)+" USDm":"—")+'</div><div class="meta">Calculated difference</div></div>'
+    +'</div>'
+    +'<div class="sectionline"><h3 class="block">Macro data table</h3><span>'+fmtSmart(macro.length)+' indicators</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Indicator</th><th class="num">Latest</th><th class="num">Previous</th><th>Change</th><th>Period</th><th>Release</th><th>Status</th><th>Source</th></tr></thead><tbody>'
+      +(indicatorRows||'<tr><td class="pad empty" colspan="8">No macro indicators available.</td></tr>')+'</tbody></table></div>'
+    +'<div class="sectionline"><h3 class="block">Investment transmission</h3><span>How each macro input reaches PSX sectors</span></div>'
+    +'<div class="macrotransgrid">'+(transmissionRows||'<div class="resultempty">No transmission notes available.</div>')+'</div>'
+    +'<div class="sectionline"><h3 class="block">Latest macro events</h3><span>Facts separated from investment impact</span></div>'
+    +(eventRows?'<div class="newsgrid">'+eventRows+'</div>':'<div class="resultempty">No macro research events available.</div>')
+    +'<div class="sectionline"><h3 class="block">Research actions</h3><span>What the desk should refresh next</span></div>'
+    +(actionRows||'<div class="resultempty">No outstanding macro research actions.</div>')
+    +'</section>';
+}
+
 function analysisHTML(){
   const live=initLiveState();
   const master=initMasterState();
@@ -1166,7 +1244,9 @@ function analysisHTML(){
         ? '<div class="resultempty prompt"><strong>Choose an analysis above and press Run.</strong><span>The result will appear here after the latest database records are refreshed.</span></div>'
         : mode==="full"
           ? fullDailyDeskResultHTML(live,master,events,macro)
-          : body;
+          : mode==="macro"
+            ? macroRatesResultHTML(live,events,macro)
+            : body;
 
   return '<div class="pagehero compact"><div><div class="eyebrow">INSTITUTIONAL DESK</div><h2 class="section">Analysis</h2>'
     +'<p class="sub">Run a focused PSX analysis against the latest research database. Facts and interpretation stay separate.</p></div>'
