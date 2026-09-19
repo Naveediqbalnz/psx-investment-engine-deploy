@@ -7,7 +7,10 @@ function render(){
     r==="companies"?companiesHTML(): r==="masters"?masterDataHTML(): r==="company"?companyHTML(route.ticker):
     r==="valuation"?valuationHTML(): r==="portfolio"?portfolioHTML():
     r==="events"?eventsHTML(): r==="queue"?queueHTML():
-    r==="log"?logHTML(): r==="sources"?sourcesHTML(): methodHTML();
+    r==="log"?logHTML(): r==="sources"?sourcesHTML():
+    r==="trade-dash"?tradingDashHTML(): r==="trade-scanner"?tradingScannerHTML():
+    r==="trade-setups"?tradingSetupsHTML(): r==="trade-watchlist"?tradingWatchlistHTML():
+    r==="trade-journal"?tradingJournalHTML(): methodHTML();
   bind();
 }
 
@@ -149,7 +152,6 @@ function perfHTML(s,st){
 }
 
 ;
-
 /* ===== assets/views-02-01.js ===== */
 function verificationBadge(status){
   const s=String(status||"").toUpperCase();
@@ -1398,3 +1400,63 @@ function masterDataHTML(){
 }
 
 ;
+
+;
+/* ===== assets/views-trading.js ===== */
+function tradingSnapshotRows(){
+  const master=initMasterState();
+  return (master.companies||[]).filter(c=>num(c.last_price)!==null).slice()
+    .sort((a,b)=>String(b.price_date||"").localeCompare(String(a.price_date||""))||String(a.ticker||"").localeCompare(String(b.ticker||"")));
+}
+function tradingCatalystEvents(){
+  return (initLiveState().events||[]).slice().sort((a,b)=>String(b.event_date||"").localeCompare(String(a.event_date||"")));
+}
+function tradingHero(title,sub){
+  return '<div class="tradehero"><div><div class="eyebrow">TRADING WORKSPACE</div><h2 class="section">'+esc(title)+'</h2><p class="sub">'+esc(sub)+'</p></div>'
+    +'<div class="tradebadge"><span>Market-data mode</span><strong>Snapshot / research only</strong><small>No unverified live signals</small></div></div>';
+}
+function tradingDashHTML(){
+  const master=initMasterState(), live=initLiveState();
+  const priced=tradingSnapshotRows(), events=tradingCatalystEvents();
+  const latestDate=priced.length?priced[0].price_date:null;
+  const latestEvents=events.slice(0,5).map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.ticker_sector||e.entity_type||"Market")+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p></article>').join("");
+  return tradingHero("Trading desk","Short-term workflow kept separate from long-term fundamental investing. Technical signals remain blank until sufficient verified price and volume history is connected.")
+    +'<div class="tradegrid">'
+      +'<div class="tradecard tradeready"><span>Universe</span><strong>'+fmtSmart((master.companies||[]).length)+' companies</strong><p>PSX company master available.</p></div>'
+      +'<div class="tradecard tradeready"><span>Price snapshots</span><strong>'+fmtSmart(priced.length)+' companies</strong><p>Latest stored profile snapshot: '+fmtDate(latestDate)+'.</p></div>'
+      +'<div class="tradecard tradegap"><span>OHLCV history</span><strong>Not available</strong><p>Needed for moving averages, RSI, volume, ATR and candlestick setups.</p></div>'
+      +'<div class="tradecard tradegap"><span>Intraday feed</span><strong>Not connected</strong><p>No real-time trading signal will be fabricated.</p></div>'
+      +'<div class="tradecard tradeready"><span>Catalysts</span><strong>'+fmtSmart(events.length)+' events</strong><p>Research-event tape can support catalyst monitoring.</p></div>'
+      +'<div class="tradecard tradegap"><span>Trade journal</span><strong>Foundation ready</strong><p>Dedicated trading journal storage is the next build step.</p></div>'
+    +'</div>'
+    +'<div class="sectionline"><h3 class="block">Latest catalysts</h3><span>Research events, not trade signals</span></div>'
+    +(latestEvents||'<p class="empty">No research events available.</p>')
+    +'<div class="sectionline"><h3 class="block">Trading build order</h3><span>Required before automated setups</span></div>'
+    +'<div class="queue warn"><strong>1. Price history</strong><span class="why">Verified daily OHLCV with sufficient history for technical indicators.</span><span class="act">Data</span></div>'
+    +'<div class="queue warn"><strong>2. Scanner engine</strong><span class="why">Momentum, volume, breakout, support/resistance and volatility calculations.</span><span class="act">Engine</span></div>'
+    +'<div class="queue"><strong>3. Risk & journal</strong><span class="why">Entry, stop, target, position size, R-multiple and post-trade review.</span><span class="act">Workflow</span></div>';
+}
+function tradingScannerHTML(){
+  const rows=tradingSnapshotRows().slice(0,100).map(c=>'<tr><td class="pad"><a href="#" data-nav="company" data-id="'+esc(c.ticker)+'"><strong>'+esc(c.ticker)+'</strong></a></td><td class="pad">'+esc(c.company_name||"—")+'</td><td class="pad">'+esc(c.sector||"—")+'</td><td class="pad num">'+fmtSmart(c.last_price,2)+'</td><td class="pad">'+fmtDate(c.price_date)+'</td><td class="pad empty">—</td><td class="pad empty">—</td><td class="pad empty">—</td></tr>').join("");
+  return tradingHero("Scanner","A trading scanner should rank price action only after verified OHLCV history exists. Current stored prices are shown as dated snapshots, not live quotes.")
+    +'<div class="noticebox"><strong>Technical columns intentionally blank</strong><span>Momentum, volume, support/resistance and setup fields remain — until the market-data history is connected.</span></div>'
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Company</th><th>Sector</th><th class="num">Snapshot price</th><th>Price date</th><th>Momentum</th><th>Volume</th><th>Setup</th></tr></thead><tbody>'
+    +(rows||'<tr><td class="pad empty" colspan="8">No price snapshots available.</td></tr>')+'</tbody></table></div>';
+}
+function tradingSetupsHTML(){
+  return tradingHero("Setups","Rule-based short-term setups will live here once price and volume history is verified.")
+    +'<div class="tradegrid">'
+      +'<div class="tradecard tradegap"><span>Breakout</span><strong>Waiting for OHLCV</strong><p>Resistance break, volume confirmation, ATR-based risk.</p></div>'
+      +'<div class="tradecard tradegap"><span>Pullback</span><strong>Waiting for OHLCV</strong><p>Trend context, support retest and risk/reward.</p></div>'
+      +'<div class="tradecard tradegap"><span>Momentum</span><strong>Waiting for OHLCV</strong><p>EMA structure, RSI, relative strength and volume.</p></div>'
+    +'</div>'
+    +'<div class="noticebox"><strong>No automatic calls yet</strong><span>This page will not label a stock BUY/SELL or create technical levels from insufficient data.</span></div>';
+}
+function tradingWatchlistHTML(){
+  return tradingHero("Trading watchlist","A separate short-term watchlist, independent of the long-term investment portfolio.")
+    +'<div class="resultempty prompt"><strong>No trading watchlist stored yet.</strong><span>Next we can add ticker, setup, trigger, invalidation/stop, target, catalyst, expiry date and status.</span></div>';
+}
+function tradingJournalHTML(){
+  return tradingHero("Trade journal","Short-term execution records should be separate from the investing decision log.")
+    +'<div class="resultempty prompt"><strong>Trading journal storage is not built yet.</strong><span>The journal will track entry, exit, stop, target, position size, fees, R-multiple, thesis, screenshot/reference and review notes without mixing them into long-term investment decisions.</span></div>';
+}
