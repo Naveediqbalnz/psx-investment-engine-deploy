@@ -6,17 +6,25 @@ function bind(){
   document.querySelectorAll("[data-analysis-run]").forEach(b=>b.onclick=async()=>{
     const mode=b.dataset.analysisRun||"full";
     route.analysisMode=mode;
-    setStatus("Refreshing analysis…","saving");
-    b.disabled=true;
+    route.analysisRunning=true;
+    route.analysisRan=false;
+    route.analysisError=null;
+    render();
+    setStatus("Running "+(mode==="full"?"Full Daily Desk":"analysis")+"…","saving");
     try{
       await loadMasterData();
       await loadLiveResearchData();
-      render();
-      setStatus("Analysis refreshed","saved");
+      route.analysisRan=true;
+      route.analysisRanAt=new Date().toISOString();
+      route.analysisError=null;
+      setStatus("Analysis complete","saved");
     }catch(e){
-      route.analysisMode=mode;
+      route.analysisRan=false;
+      route.analysisError=(e&&e.message)||"Could not refresh analysis data";
+      setStatus("Analysis failed");
+    }finally{
+      route.analysisRunning=false;
       render();
-      setStatus("Analysis refresh failed");
     }
   });
   const mark=el=>{el.onfocus=()=>typing=true; el.onblur=()=>typing=false;};
