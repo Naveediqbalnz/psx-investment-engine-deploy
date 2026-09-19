@@ -243,6 +243,101 @@ function companyLatestValuation(ticker){
   return (initLiveState().valuations||[]).filter(x=>cleanTicker(x.ticker)===t)
     .slice().sort((a,b)=>String(b.as_of||"").localeCompare(String(a.as_of||"")))[0]||null;
 }
+function bankResidualModel(p){
+  const book=num(p.book), start=num(p.startRoe), end=num(p.endRoe), payoutPct=num(p.payout),
+        coePct=num(p.coe), terminalRoePct=num(p.terminalRoe), growthPct=num(p.growth);
+  if([book,start,end,payoutPct,coePct,terminalRoePct,growthPct].some(x=>x===null)) return null;
+  if(book<=0||payoutPct<0||payoutPct>100) return null;
+  const payout=payoutPct/100, ke=coePct/100, g=growthPct/100, troe=terminalRoePct/100;
+  if(ke<=g||troe<=g||ke<=0) return null;
+  let bv=book, pvri=0, pvdiv=0;
+  const roes=[];
+  for(let i=0;i<5;i++){
+    const roe=(start+(end-start)*(i/4))/100;
+    roes.push(roe*100);
+    const eps=roe*bv;
+    const div=payout*eps;
+    const ri=(roe-ke)*bv;
+    pvri+=ri/Math.pow(1+ke,i+1);
+    pvdiv+=div/Math.pow(1+ke,i+1);
+    bv+=eps-div;
+  }
+  const terminalRI=((troe-ke)*bv)/(ke-g);
+  const residual=book+pvri+terminalRI/Math.pow(1+ke,5);
+  const terminalDividend=((troe-g)*bv)/(ke-g);
+  const ddm=pvdiv+terminalDividend/Math.pow(1+ke,5);
+  const fair=(residual+ddm)/2;
+  return {fair,residual,ddm,bv5:bv,pvri,roes,terminalPayout:(1-g/troe)*100};
+}
+function bankImpliedTerminalRoe(target,p){
+  const m=bankResidualModel(p), price=num(target), ke=num(p.coe), g=num(p.growth);
+  if(!m||price===null||ke===null||g===null||m.bv5===0) return null;
+  const kd=ke/100, gd=g/100;
+  return (kd+((price-num(p.book)-m.pvri)*(kd-gd)*Math.pow(1+kd,5)/m.bv5))*100;
+}
+function bankImpliedCostOfEquity(target,p){
+  const price=num(target), g=num(p.growth);
+  if(price===null||g===null) return null;
+  let lo=Math.max(g+0.1,5), hi=50;
+  const valueAt=coe=>{const m=bankResidualModel(Object.assign({},p,{coe}));return m?m.fair:null;};
+  let vlo=valueAt(lo), vhi=valueAt(hi);
+  if(vlo===null||vhi===null||price>vlo||price<vhi) return null;
+  for(let i=0;i<70;i++){
+    const mid=(lo+hi)/2, v=valueAt(mid);
+    if(v===null) return null;
+    if(v>price) lo=mid; else hi=mid;
+  }
+  return (lo+hi)/2;
+}
+function updateMeblValuationInteractive(){
+  const root=document.querySelector("[data-mebl-model-root]");
+  if(!root) return;
+  const p={book:root.dataset.book,price:root.dataset.price,tbill:root.dataset.tbill};
+  root.querySelectorAll("[data-mebl-model]").forEach(el=>p[el.dataset.meblModel]=el.value);
+  const m=bankResidualModel(p);
+  const put=(k,v)=>{const el=root.querySelector('[data-model-output="'+k+'"]');if(el)el.textContent=v;};
+  if(!m){
+    put("fair","—");put("ri","—");put("ddm","—");put("vsprice","—");put("mos","—");put("pb","—");
+    const mat=root.querySelector("#meblSensitivity"); if(mat) mat.innerHTML='<div class="resultempty error"><strong>Invalid model assumptions</strong><span>Cost of equity must exceed terminal growth, and terminal ROE must exceed terminal growth.</span></div>';
+    return;
+  }
+  const price=num(p.price), book=num(p.book);
+  const vs=price?((m.fair-price)/price)*100:null;
+  const mos=m.fair?((m.fair-price)/m.fair)*100:null;
+  put("fair","Rs "+fmt(m.fair,2));
+  put("ri","Rs "+fmt(m.residual,2));
+  put("ddm","Rs "+fmt(m.ddm,2));
+  put("vsprice",vs===null?"—":pct(vs));
+  put("mos",mos===null?"—":pct(mos));
+  put("pb",book?fmt(m.fair/book,2)+"x":"—");
+  put("roePath",m.roes.map(x=>fmt(x,1)+"%").join(" → "));
+  put("terminalPayout",fmt(m.terminalPayout,1)+"%");
+  const impliedRoe=bankImpliedTerminalRoe(price,p);
+  const impliedCoe=bankImpliedCostOfEquity(price,p);
+  put("impliedRoe",impliedRoe===null?"—":fmt(impliedRoe,1)+"%");
+  put("impliedCoe",impliedCoe===null?"—":fmt(impliedCoe,2)+"%");
+  const premium=impliedCoe!==null&&num(p.tbill)!==null?impliedCoe-num(p.tbill):null;
+  put("impliedPremium",premium===null?"—":fmt(premium,2)+"pp");
+
+  const matrix=root.querySelector("#meblSensitivity");
+  if(matrix){
+    const baseCoe=num(p.coe), baseTR=num(p.terminalRoe);
+    const coes=[-4,-2,0,2,4].map(x=>Math.max(num(p.growth)+0.5,baseCoe+x));
+    const troes=[-6,-3,0,3,6].map(x=>Math.max(num(p.growth)+0.5,baseTR+x));
+    let html='<table class="sensmatrix"><thead><tr><th>Terminal ROE / COE</th>'+coes.map(x=>'<th>'+fmt(x,1)+'%</th>').join("")+'</tr></thead><tbody>';
+    troes.forEach(tr=>{
+      html+='<tr><th>'+fmt(tr,1)+'%</th>';
+      coes.forEach(coe=>{
+        const x=bankResidualModel(Object.assign({},p,{coe,terminalRoe:tr}));
+        const current=Math.abs(coe-baseCoe)<0.01&&Math.abs(tr-baseTR)<0.01;
+        html+='<td class="'+(current?"current":"")+'">'+(x?"Rs "+fmt(x.fair,0):"—")+'</td>';
+      });
+      html+='</tr>';
+    });
+    html+='</tbody></table>';
+    matrix.innerHTML=html;
+  }
+}
 function companyLiveEvents(ticker){
   const t=cleanTicker(ticker);
   return (initLiveState().events||[]).filter(e=>{
@@ -427,7 +522,7 @@ function bankCompanyHTML(t,c,master,dc){
       const label=String(s.scenario||"").toUpperCase();
       return '<div class="valscenario '+label.toLowerCase()+'"><div class="valscenariohead"><span>'+esc(label)+'</span>'+verificationBadge(s.verification_status||"PROVISIONAL")+'</div>'
         +'<strong>Rs '+fmtSmart(s.blended_fair_value,2)+'</strong>'
-        +'<small>Residual income Rs '+fmtSmart(s.fair_value_primary,2)+' · DDM Rs '+fmtSmart(s.fair_value_secondary,2)+'</small>'
+        +'<small>Residual income Rs '+fmtSmart(s.fair_value_primary,2)+' · DDM check Rs '+fmtSmart(s.fair_value_secondary,2)+'</small>'
         +'<dl><dt>ROE path</dt><dd>'+fmtSmart(s.sustainable_roe_year1_pct,1)+'% → '+fmtSmart(s.sustainable_roe_year5_pct,1)+'%</dd>'
         +'<dt>Payout</dt><dd>'+fmtSmart(s.payout_pct,1)+'%</dd>'
         +'<dt>Cost of equity</dt><dd>'+fmtSmart(s.cost_of_equity_pct,1)+'%</dd>'
@@ -436,15 +531,61 @@ function bankCompanyHTML(t,c,master,dc){
         +'<dt>Vs current price</dt><dd class="'+(num(s.upside_downside_pct)>=0?"pos":"neg")+'">'+pct(num(s.upside_downside_pct))+'</dd></dl></div>';
     }).join("");
 
-    body='<div class="valuationhero"><div><div class="analysislabel">MEBL INTRINSIC VALUE MODEL</div><h3>5-year residual income + dividend-discount cross-check</h3><p>The model uses audited FY2025 book value as the anchor and explicitly fades ROE rather than capitalising the current 34.7% indefinitely. The 12-month T-bill is the opportunity-cost anchor; cost-of-equity premiums are scenario assumptions.</p></div>'
+    const historyMap={};
+    valuationScenarios.forEach(s=>{const d=String(s.as_of||"");if(!historyMap[d])historyMap[d]={date:d};historyMap[d][String(s.scenario||"").toLowerCase()]=s;});
+    const historyRows=Object.values(historyMap).sort((a,b)=>b.date.localeCompare(a.date)).map(h=>
+      '<tr><td class="pad">'+fmtDate(h.date)+'</td>'
+      +'<td class="pad num">'+(h.bear?"Rs "+fmtSmart(h.bear.blended_fair_value,2):"—")+'</td>'
+      +'<td class="pad num">'+(h.base?"Rs "+fmtSmart(h.base.blended_fair_value,2):"—")+'</td>'
+      +'<td class="pad num">'+(h.bull?"Rs "+fmtSmart(h.bull.blended_fair_value,2):"—")+'</td>'
+      +'<td class="pad">'+verificationBadge((h.base&&h.base.verification_status)||"PROVISIONAL")+'</td></tr>'
+    ).join("");
+
+    const modelBook=bvps;
+    const modelPrice=price;
+    const modelTbill=tbill;
+    body='<div class="valuationhero"><div><div class="analysislabel">MEBL INTRINSIC VALUE MODEL</div><h3>5-year residual income + clean-surplus DDM check</h3><p>The model anchors to audited FY2025 book value and fades ROE over five years. The DDM check uses the same clean-surplus economics, so it should converge with residual income when assumptions are internally consistent.</p></div>'
       +'<div class="valuationstatus">'+verificationBadge(latestValuation?latestValuation.verification_status:"MISSING")+'<span>'+(latestValuation?("Model as of "+fmtDate(latestValuation.as_of)):"No model stored")+'</span></div></div>'
       +'<div class="bank-kpis four">'
         +'<div class="kpi"><div class="k">Current price</div><div class="v">Rs '+fmt(price,2)+'</div><div class="meta">'+fmtDate(master.price_date)+'</div></div>'
-        +'<div class="kpi"><div class="k">Model range</div><div class="v">Rs '+(bearScenario?fmtSmart(bearScenario.blended_fair_value,0):"—")+'–'+(bullScenario?fmtSmart(bullScenario.blended_fair_value,0):"—")+'</div></div>'
-        +'<div class="kpi"><div class="k">Base fair value</div><div class="v">'+(baseScenario?"Rs "+fmtSmart(baseScenario.blended_fair_value,2):"—")+'</div></div>'
-        +'<div class="kpi"><div class="k">Base vs price</div><div class="v '+(baseScenario&&num(baseScenario.upside_downside_pct)>=0?"pos":"neg")+'">'+(baseScenario?pct(num(baseScenario.upside_downside_pct)):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Saved model range</div><div class="v">Rs '+(bearScenario?fmtSmart(bearScenario.blended_fair_value,0):"—")+'–'+(bullScenario?fmtSmart(bullScenario.blended_fair_value,0):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Saved base value</div><div class="v">'+(baseScenario?"Rs "+fmtSmart(baseScenario.blended_fair_value,2):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Saved base vs price</div><div class="v '+(baseScenario&&num(baseScenario.upside_downside_pct)>=0?"pos":"neg")+'">'+(baseScenario?pct(num(baseScenario.upside_downside_pct)):"—")+'</div></div>'
       +'</div>'
       +'<div class="valscenarios">'+(scenarioCards||'<p class="empty">No stored valuation scenarios.</p>')+'</div>'
+
+      +'<div class="sectionline"><h3 class="block">Interactive scenario lab</h3><span>Updates instantly; does not overwrite verified source data</span></div>'
+      +'<div class="modellab" data-mebl-model-root data-book="'+esc(modelBook)+'" data-price="'+esc(modelPrice)+'" data-tbill="'+esc(modelTbill)+'">'
+        +'<div class="modelcontrols">'
+          +'<div class="field"><label>Year 1 ROE %</label><input type="number" step="0.1" data-guest-enabled data-mebl-model="startRoe" data-model-default="'+esc(baseScenario&&baseScenario.sustainable_roe_year1_pct||30)+'" value="'+esc(baseScenario&&baseScenario.sustainable_roe_year1_pct||30)+'"></div>'
+          +'<div class="field"><label>Year 5 ROE %</label><input type="number" step="0.1" data-guest-enabled data-mebl-model="endRoe" data-model-default="'+esc(baseScenario&&baseScenario.sustainable_roe_year5_pct||25)+'" value="'+esc(baseScenario&&baseScenario.sustainable_roe_year5_pct||25)+'"></div>'
+          +'<div class="field"><label>Payout %</label><input type="number" step="0.1" min="0" max="100" data-guest-enabled data-mebl-model="payout" data-model-default="'+esc(baseScenario&&baseScenario.payout_pct||58)+'" value="'+esc(baseScenario&&baseScenario.payout_pct||58)+'"></div>'
+          +'<div class="field"><label>Cost of equity %</label><input type="number" step="0.1" data-guest-enabled data-mebl-model="coe" data-model-default="'+esc(baseScenario&&baseScenario.cost_of_equity_pct||18)+'" value="'+esc(baseScenario&&baseScenario.cost_of_equity_pct||18)+'"></div>'
+          +'<div class="field"><label>Terminal ROE %</label><input type="number" step="0.1" data-guest-enabled data-mebl-model="terminalRoe" data-model-default="'+esc(baseScenario&&baseScenario.terminal_roe_pct||24)+'" value="'+esc(baseScenario&&baseScenario.terminal_roe_pct||24)+'"></div>'
+          +'<div class="field"><label>Terminal growth %</label><input type="number" step="0.1" data-guest-enabled data-mebl-model="growth" data-model-default="'+esc(baseScenario&&baseScenario.terminal_growth_pct||6)+'" value="'+esc(baseScenario&&baseScenario.terminal_growth_pct||6)+'"></div>'
+        +'</div>'
+        +'<div class="modeltoolbar"><button class="btn small" type="button" data-mebl-reset>Reset to saved base</button><span>Audited BVPS Rs '+fmtSmart(modelBook,2)+' · 12M T-bill '+fmtSmart(modelTbill,2)+'%</span></div>'
+        +'<div class="bank-kpis four modeloutputs">'
+          +'<div class="kpi"><div class="k">Live fair value</div><div class="v" data-model-output="fair">—</div></div>'
+          +'<div class="kpi"><div class="k">Residual income</div><div class="v" data-model-output="ri">—</div></div>'
+          +'<div class="kpi"><div class="k">DDM check</div><div class="v" data-model-output="ddm">—</div></div>'
+          +'<div class="kpi"><div class="k">Vs current price</div><div class="v" data-model-output="vsprice">—</div></div>'
+          +'<div class="kpi"><div class="k">Margin of safety</div><div class="v" data-model-output="mos">—</div></div>'
+          +'<div class="kpi"><div class="k">Implied fair P/B</div><div class="v" data-model-output="pb">—</div></div>'
+          +'<div class="kpi"><div class="k">ROE fade path</div><div class="v smallv" data-model-output="roePath">—</div></div>'
+          +'<div class="kpi"><div class="k">Terminal payout implied by g</div><div class="v" data-model-output="terminalPayout">—</div></div>'
+        +'</div>'
+        +'<div class="sectionline"><h3 class="block">What would justify the market price?</h3><span>Holding the other live inputs constant</span></div>'
+        +'<div class="bank-kpis four">'
+          +'<div class="kpi"><div class="k">Implied terminal ROE</div><div class="v" data-model-output="impliedRoe">—</div><div class="meta">At selected cost of equity / growth</div></div>'
+          +'<div class="kpi"><div class="k">Implied cost of equity</div><div class="v" data-model-output="impliedCoe">—</div><div class="meta">At selected terminal ROE / growth</div></div>'
+          +'<div class="kpi"><div class="k">Implied equity premium vs T-bill</div><div class="v" data-model-output="impliedPremium">—</div></div>'
+          +'<div class="kpi"><div class="k">Market price</div><div class="v">Rs '+fmt(price,2)+'</div></div>'
+        +'</div>'
+        +'<div class="sectionline"><h3 class="block">Sensitivity matrix</h3><span>Fair value by terminal ROE and cost of equity</span></div>'
+        +'<div id="meblSensitivity" class="sensitivitywrap"></div>'
+      +'</div>'
+
       +'<div class="sectionline"><h3 class="block">Verified anchors</h3><span>Facts used by the model</span></div>'
       +'<div class="bank-kpis four">'
         +'<div class="kpi"><div class="k">FY25 BVPS</div><div class="v">Rs '+fmtSmart(bvps,2)+'</div></div>'
@@ -456,8 +597,13 @@ function bankCompanyHTML(t,c,master,dc){
         +'<div class="kpi"><div class="k">NPF / coverage</div><div class="v">'+(latestNpfRow?fmtSmart(latestNpfRow.npf_ratio_pct,2)+"%":"—")+' / '+(latestCoverageRow?fmtSmart(latestCoverageRow.coverage_ratio_pct,0)+"%":"—")+'</div></div>'
         +'<div class="kpi"><div class="k">CAR</div><div class="v">'+(latestCarRow?(num(latestCarRow.car_pct)!==null?fmtSmart(latestCarRow.car_pct,1)+"%":"> "+fmtSmart(latestCarRow.car_min_pct,1)+"%"):"—")+'</div></div>'
       +'</div>'
-      +'<div class="resultnotice limited"><strong>Margin of safety</strong><span>Using the Graham convention (intrinsic value minus price, divided by intrinsic value), the base-case margin of safety is '+(baseScenario?pct(num(baseScenario.margin_of_safety_pct)):"—")+'. A negative value means the market price is above that modeled intrinsic value.</span></div>'
-      +'<div class="noticebox"><strong>Model sensitivity</strong><span>This valuation is most sensitive to sustainable ROE, cost of equity and terminal growth. It is a model output, not an issuer target. If those assumptions change, the fair-value range will change materially.</span></div>'
+      +'<div class="resultnotice limited"><strong>Interpretation rule</strong><span>Negative margin of safety means the market price is above the modeled intrinsic value under the selected assumptions. It is not a trading instruction.</span></div>'
+      +'<div class="noticebox"><strong>Model sensitivity</strong><span>Sustainable ROE, cost of equity and terminal growth drive most of the valuation. The live scenario lab is designed to make that sensitivity visible rather than hide it behind one target price.</span></div>'
+
+      +'<div class="sectionline"><h3 class="block">Model history</h3><span>Stored valuation snapshots</span></div>'
+      +'<div class="scroll"><table><thead><tr><th>As of</th><th class="num">Bear</th><th class="num">Base</th><th class="num">Bull</th><th>Status</th></tr></thead><tbody>'
+        +(historyRows||'<tr><td class="pad empty" colspan="5">No model history stored yet.</td></tr>')+'</tbody></table></div>'
+
       +'<div class="sectionline"><h3 class="block">Personal fair-value overlay</h3><span>Optional; saved only when signed in</span></div>'
       +'<div class="inline">'
         +'<div class="field"><label>Bear Rs</label><input type="text" data-co-field="bear" value="'+esc(c.bear||"")+'"></div>'
@@ -468,8 +614,8 @@ function bankCompanyHTML(t,c,master,dc){
       +'<div class="bank-kpis four" style="margin-top:14px">'
         +'<div class="kpi"><div class="k">Personal base upside</div><div class="v '+(upside===null?"na":upside>=0?"pos":"neg")+'">'+(upside===null?"—":pct(upside))+'</div></div>'
         +'<div class="kpi"><div class="k">Current P/B</div><div class="v">'+(pb===null?"—":fmt(pb,2)+"x")+'</div></div>'
-        +'<div class="kpi"><div class="k">Model base P/B</div><div class="v">'+(latestValuation&&num(latestValuation.target_pb)!==null?fmtSmart(latestValuation.target_pb,2)+"x":"—")+'</div></div>'
-        +'<div class="kpi"><div class="k">Base required return</div><div class="v">'+(baseScenario?fmtSmart(baseScenario.cost_of_equity_pct,1)+"%":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Saved model base P/B</div><div class="v">'+(latestValuation&&num(latestValuation.target_pb)!==null?fmtSmart(latestValuation.target_pb,2)+"x":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Saved base required return</div><div class="v">'+(baseScenario?fmtSmart(baseScenario.cost_of_equity_pct,1)+"%":"—")+'</div></div>'
       +'</div>';
   } else if(tab==="news"){
     const own=companyEvents.map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.event_type||"Event")+'</span><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div>'+(e.required_action?'<div class="newsaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")+'</article>').join("");
