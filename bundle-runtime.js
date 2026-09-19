@@ -326,32 +326,73 @@ async function startApp(sess){
     gateMsg("config.js is missing your Supabase address and publishable key. Fill it in, then reload.");
     return;
   }
-  sb = window.supabase.createClient(CONFIG.supabaseUrl, browserKey);
-  const recoveryMode = location.hash.indexOf("type=recovery")>=0 || location.search.indexOf("type=recovery")>=0;
-  const { data } = await sb.auth.getSession();
 
-  if(recoveryMode && data && data.session){
+  $("#gate").hidden=false;
+  gateMsg("Checking sign-in link…");
+  sb = window.supabase.createClient(CONFIG.supabaseUrl, browserKey);
+
+  let recoveryActive=false;
+  function showRecovery(sess){
+    recoveryActive=true;
+    session=sess||session;
     $("#gate").hidden=false;
+    $("#app").hidden=true;
     $("#standardAuthActions").hidden=true;
     $("#recoveryBox").hidden=false;
     $("#email").parentElement.hidden=true;
     $("#pw").parentElement.hidden=true;
     gateMsg("Enter a new password for your PSX account.");
-    $("#setNewPw").onclick=async()=>{
-      const password=$("#newPw").value;
-      if(!password || password.length<8){ gateMsg("Use at least 8 characters."); return; }
-      gateMsg("Updating password…");
-      const { error } = await sb.auth.updateUser({ password });
-      if(error){ gateMsg(error.message); return; }
-      history.replaceState({}, document.title, location.pathname);
-      gateMsg("Password updated. Opening your research file…");
-      await startApp(data.session);
-    };
+  }
+
+  const hashParams=new URLSearchParams((location.hash||"").replace(/^#/,""));
+  const queryParams=new URLSearchParams(location.search||"");
+  const linkError=hashParams.get("error_description") || queryParams.get("error_description");
+  if(linkError){
+    $("#gate").hidden=false;
+    gateMsg(decodeURIComponent(linkError.replace(/\+/g," ")));
+  }
+
+  sb.auth.onAuthStateChange((event,sess)=>{
+    if(event==="PASSWORD_RECOVERY"){
+      showRecovery(sess);
+    }
+  });
+
+  $("#setNewPw").onclick=async()=>{
+    const password=$("#newPw").value;
+    if(!password || password.length<8){ gateMsg("Use at least 8 characters."); return; }
+    gateMsg("Updating password…");
+    const { error } = await sb.auth.updateUser({ password });
+    if(error){ gateMsg(error.message); return; }
+    history.replaceState({}, document.title, location.pathname);
+    gateMsg("Password updated. Opening your research file…");
+    const { data:d } = await sb.auth.getSession();
+    if(d && d.session) await startApp(d.session);
+  };
+
+  const { data } = await sb.auth.getSession();
+
+  const recoveryHint =
+    hashParams.get("type")==="recovery" ||
+    queryParams.get("type")==="recovery" ||
+    queryParams.get("recovery")==="1";
+
+  if(recoveryHint && data && data.session){
+    showRecovery(data.session);
     return;
   }
 
-  if(data && data.session){ await startApp(data.session); return; }
-  $("#gate").hidden=false;
+  // Give the auth client a brief moment to emit PASSWORD_RECOVERY after parsing the URL.
+  if(data && data.session){
+    await new Promise(resolve=>setTimeout(resolve,120));
+    if(recoveryActive) return;
+    await startApp(data.session);
+    return;
+  }
+
+  if(recoveryActive) return;
+  gateMsg("");
+
   $("#signIn").onclick=async()=>{
     gateMsg("Signing in…");
     const { data:d, error } = await sb.auth.signInWithPassword({
@@ -359,6 +400,7 @@ async function startApp(sess){
     if(error){ gateMsg(error.message); return; }
     await startApp(d.session);
   };
+
   $("#signUp").onclick=async()=>{
     gateMsg("Creating account…");
     const { data:d, error } = await sb.auth.signUp({
@@ -367,13 +409,16 @@ async function startApp(sess){
     if(d.session){ await startApp(d.session); }
     else gateMsg("Check your email to confirm the address, then sign in.");
   };
+
   $("#forgotPw").onclick=async()=>{
     const email=$("#email").value.trim();
     if(!email){ gateMsg("Enter your email address first."); $("#email").focus(); return; }
     gateMsg("Sending password reset email…");
-    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin });
+    const redirectTo = location.origin + "/?recovery=1";
+    const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
     if(error){ gateMsg(error.message); return; }
-    gateMsg("Password reset email sent. Check Inbox and Spam, then open the link.");
+    gateMsg("Password reset email sent. Open the newest email link. Older reset links may expire.");
   };
+
   $("#pw").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#signIn").click(); });
 })();
