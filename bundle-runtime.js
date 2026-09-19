@@ -415,17 +415,28 @@ async function startApp(sess){
 
 (async function(){
   const browserKey = window.CONFIG && (CONFIG.supabasePublishableKey || CONFIG.supabaseAnonKey);
-  if(!window.CONFIG || !CONFIG.supabaseUrl || !browserKey){
-    $("#gate").hidden=false;
-    gateMsg("config.js is missing your Supabase address and publishable key. Fill it in, then reload.");
+  $("#gate").hidden=false;
+  if(!window.CONFIG || !CONFIG.supabaseUrl || !browserKey || !window.supabase){
+    gateMsg("Sign-in could not load. Reload the page and try again.");
     return;
   }
-
-  $("#gate").hidden=false;
-  gateMsg("Checking sign-in…");
   sb = window.supabase.createClient(CONFIG.supabaseUrl, browserKey);
+  let recoveryActive=false, busy=false, timedOut=false;
+  const hashParams=new URLSearchParams((location.hash||"").replace(/^#/,""));
+  const queryParams=new URLSearchParams(location.search||"");
+  const recoveryHint=hashParams.get("type")==="recovery" || queryParams.get("type")==="recovery" || queryParams.get("recovery")==="1";
+  const linkError=hashParams.get("error_description") || queryParams.get("error_description");
 
-  let recoveryActive=false;
+  function authTimeout(promise){
+    let timer;
+    return Promise.race([
+      promise,
+      new Promise((_,reject)=>{timer=setTimeout(()=>{
+        timedOut=true;
+        reject(new Error("The request timed out. Close other PSX tabs and reload this page. If you were updating your password, try signing in with the new password before requesting another reset."));
+      },20000);})
+    ]).finally(()=>clearTimeout(timer));
+  }
   function showRecovery(sess){
     recoveryActive=true;
     session=sess||session;
@@ -437,67 +448,93 @@ async function startApp(sess){
     $("#pw").parentElement.hidden=true;
     gateMsg("Enter a new password for your PSX account.");
   }
-
-  const hashParams=new URLSearchParams((location.hash||"").replace(/^#/,""));
-  const queryParams=new URLSearchParams(location.search||"");
-  const linkError=hashParams.get("error_description") || queryParams.get("error_description");
-  if(linkError) gateMsg(decodeURIComponent(linkError.replace(/\+/g," ")));
-
+  function showSignIn(){
+    recoveryActive=false;
+    $("#gate").hidden=false;
+    $("#app").hidden=true;
+    $("#standardAuthActions").hidden=false;
+    $("#recoveryBox").hidden=true;
+    $("#email").parentElement.hidden=false;
+    $("#pw").parentElement.hidden=false;
+  }
+  async function runAuth(action){
+    if(busy || timedOut) return;
+    busy=true;
+    const buttons=["#signIn","#forgotPw","#setNewPw"];
+    buttons.forEach(id=>$(id).disabled=true);
+    try{await action();}
+    catch(e){gateMsg(e.message||"Sign-in failed. Reload and try again.");}
+    finally{
+      busy=false;
+      buttons.forEach(id=>$(id).disabled=timedOut);
+    }
+  }
+  // Keep auth callbacks synchronous: API calls here can block the auth lock.
   sb.auth.onAuthStateChange((event,sess)=>{
     if(event==="PASSWORD_RECOVERY") showRecovery(sess);
+    else if(event==="SIGNED_OUT") {session=null; showSignIn();}
   });
 
-  $("#setNewPw").onclick=async()=>{
+  $("#setNewPw").onclick=()=>runAuth(async()=>{
     const password=$("#newPw").value;
-    if(!password || password.length<8){ gateMsg("Use at least 8 characters."); return; }
+    if(!password || password.length<8){gateMsg("Use at least 8 characters.");return;}
+    gateMsg("Checking reset link…");
+    const {data,error:sessionError}=await authTimeout(sb.auth.getSession());
+    if(sessionError) throw sessionError;
+    if(!recoveryActive || !data?.session){
+      showSignIn();
+      gateMsg("Your reset session is missing or expired. Enter your email and choose Forgot password to get a fresh link.");
+      return;
+    }
     gateMsg("Updating password…");
-    const { error } = await sb.auth.updateUser({ password });
-    if(error){ gateMsg(error.message); return; }
-    history.replaceState({}, document.title, location.pathname);
-    const { data:d } = await sb.auth.getSession();
-    if(d && d.session) await startApp(d.session);
-  };
-
-  const { data } = await sb.auth.getSession();
-  const recoveryHint =
-    hashParams.get("type")==="recovery" ||
-    queryParams.get("type")==="recovery" ||
-    queryParams.get("recovery")==="1";
-
-  if(recoveryHint && data && data.session){ showRecovery(data.session); return; }
-
-  if(data && data.session){
-    await new Promise(resolve=>setTimeout(resolve,120));
-    if(recoveryActive) return;
+    const {error}=await authTimeout(sb.auth.updateUser({password}));
+    if(error) throw error;
+    $("#newPw").value="";
+    $("#pw").value="";
+    recoveryActive=false;
+    history.replaceState({},document.title,location.pathname);
+    gateMsg("Password updated. Opening your desk…");
+    // The verified recovery session remains valid after a password update.
     await startApp(data.session);
-    return;
-  }
-
-  gateMsg("");
-  $("#signIn").onclick=async()=>{
+  });
+  $("#signIn").onclick=()=>runAuth(async()=>{
     gateMsg("Signing in…");
-    const { data:d, error } = await sb.auth.signInWithPassword({
-      email:$("#email").value.trim(), password:$("#pw").value
-    });
-    if(error){ gateMsg(error.message); return; }
-    await startApp(d.session);
-  };
-
-  $("#signUp").onclick=async()=>{
-    gateMsg("Account creation is disabled for this private portal.");
-  };
-
-  $("#forgotPw").onclick=async()=>{
+    const {data,error}=await authTimeout(sb.auth.signInWithPassword({
+      email:$("#email").value.trim(),password:$("#pw").value
+    }));
+    if(error) throw error;
+    if(!data?.session) throw new Error("Sign-in did not return a session. Please try again.");
+    $("#pw").value="";
+    await startApp(data.session);
+  });
+  $("#signUp").onclick=()=>gateMsg("Account creation is disabled for this private portal.");
+  $("#forgotPw").onclick=()=>runAuth(async()=>{
     const email=$("#email").value.trim();
-    if(!email){ gateMsg("Enter your email address first."); $("#email").focus(); return; }
+    if(!email){gateMsg("Enter your email address first.");$("#email").focus();return;}
     gateMsg("Sending password reset email…");
-    const redirectTo=location.origin+"/?recovery=1";
-    const { error } = await sb.auth.resetPasswordForEmail(email,{redirectTo});
-    if(error){ gateMsg(error.message); return; }
+    const {error}=await authTimeout(sb.auth.resetPasswordForEmail(email,{
+      redirectTo:location.origin+"/?recovery=1"
+    }));
+    if(error) throw error;
     gateMsg("Password reset email sent. Open the newest reset link.");
-  };
-
+  });
   $("#pw").addEventListener("keydown",e=>{if(e.key==="Enter") $("#signIn").click();});
+  $("#newPw").addEventListener("keydown",e=>{if(e.key==="Enter") $("#setNewPw").click();});
+
+  await runAuth(async()=>{
+    showSignIn();
+    gateMsg("Checking sign-in…");
+    const {data,error}=await authTimeout(sb.auth.getSession());
+    if(error) throw error;
+    if(linkError){showSignIn();gateMsg(linkError+" Request a fresh link using Forgot password.");return;}
+    if(recoveryHint || recoveryActive){
+      if(data?.session) showRecovery(data.session);
+      else{showSignIn();gateMsg("Your reset link has expired or is invalid. Enter your email and choose Forgot password.");}
+      return;
+    }
+    if(data?.session) await startApp(data.session);
+    else gateMsg("");
+  });
 })();
 
 ;
