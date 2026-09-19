@@ -5,6 +5,46 @@ function bind(){
   document.querySelectorAll("[data-company-tab]").forEach(b=>b.onclick=()=>{route.companyTab=b.dataset.companyTab; render();});
   const mark=el=>{el.onfocus=()=>typing=true; el.onblur=()=>typing=false;};
 
+  const gs=$("#globalSearch"), gr=$("#globalSearchResults"), gw=$("#globalSearchWrap");
+  if(gs&&gr){
+    const records=()=>initMasterState().companies||[];
+    const showResults=()=>{
+      const q=String(gs.value||"").trim().toUpperCase();
+      if(!q){ gr.hidden=true; gr.innerHTML=""; return; }
+      const matches=records().filter(c=>{
+        const t=String(c.ticker||"").toUpperCase();
+        const n=String(c.company_name||"").toUpperCase();
+        const s=String(c.sector||"").toUpperCase();
+        return t.includes(q)||n.includes(q)||s.includes(q);
+      }).sort((a,b)=>{
+        const at=String(a.ticker||"").toUpperCase(), bt=String(b.ticker||"").toUpperCase();
+        const ae=at===q?0:at.startsWith(q)?1:2, be=bt===q?0:bt.startsWith(q)?1:2;
+        return ae-be||at.localeCompare(bt);
+      }).slice(0,8);
+      gr.innerHTML=matches.length?matches.map(c=>
+        '<button class="searchresult" type="button" data-search-ticker="'+esc(c.ticker)+'">'
+        +'<strong>'+esc(c.ticker)+'</strong><span>'+esc(c.company_name||"—")+'</span><small>'+esc(c.sector||"—")+'</small></button>'
+      ).join(""):'<div class="searchnone">No matching company</div>';
+      gr.hidden=false;
+    };
+    gs.oninput=showResults;
+    gs.onfocus=showResults;
+    gs.onkeydown=e=>{
+      if(e.key==="Escape"){gr.hidden=true;gs.blur();}
+      if(e.key==="Enter"){
+        const first=gr.querySelector("[data-search-ticker]");
+        if(first){e.preventDefault();go("company",first.dataset.searchTicker);gr.hidden=true;gs.value="";}
+      }
+    };
+    gr.querySelectorAll?.("[data-search-ticker]");
+    document.querySelectorAll("[data-search-ticker]").forEach(b=>b.onclick=()=>{});
+    gr.onclick=e=>{
+      const b=e.target.closest("[data-search-ticker]");
+      if(b){go("company",b.dataset.searchTicker);gr.hidden=true;gs.value="";}
+    };
+    document.addEventListener("click",e=>{if(gw&&!gw.contains(e.target)) gr.hidden=true;},{once:true});
+  }
+
   document.querySelectorAll("[data-macro]").forEach(el=>{
     el.oninput=el.onchange=()=>{state.macro[el.dataset.macro]=el.value; saveMacro();}; mark(el);});
 
@@ -304,7 +344,7 @@ function gateMsg(t){ $("#gateMsg").textContent=t||""; }
 function applyGuestReadOnly(){
   document.body.classList.add("guest-readonly");
   ["#importBtn","#importFile","#exportBtn","#signOut"].forEach(sel=>{ const el=$(sel); if(el) el.hidden=true; });
-  document.querySelectorAll("input, textarea, select").forEach(el=>{ el.disabled=true; });
+  document.querySelectorAll("input, textarea, select").forEach(el=>{ if(!el.hasAttribute("data-guest-enabled")) el.disabled=true; });
   document.querySelectorAll("[id^='add'], [data-delrow], [data-delco], [data-delfy], [data-delpos], [data-delev], [data-delsrc], [data-pull]").forEach(el=>{ el.hidden=true; });
 }
 async function startGuestApp(){
