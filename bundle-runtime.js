@@ -3,6 +3,14 @@
 function bind(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{route.tab=b.dataset.tab; render();});
   document.querySelectorAll("[data-company-tab]").forEach(b=>b.onclick=()=>{route.companyTab=b.dataset.companyTab; render();});
+  document.querySelectorAll("[data-trade-chart-mode]").forEach(b=>b.onclick=()=>{
+    route.tradeChartMode=b.dataset.tradeChartMode||"price";
+    render();
+  });
+  document.querySelectorAll("[data-trade-range]").forEach(b=>b.onclick=()=>{
+    route.tradeRange=b.dataset.tradeRange||"1M";
+    render();
+  });
   const meblModelInputs=document.querySelectorAll("[data-mebl-model]");
   if(meblModelInputs.length){
     meblModelInputs.forEach(el=>{el.oninput=el.onchange=()=>updateMeblValuationInteractive();});
