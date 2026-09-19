@@ -3,6 +3,16 @@
 function bind(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{route.tab=b.dataset.tab; render();});
   document.querySelectorAll("[data-company-tab]").forEach(b=>b.onclick=()=>{route.companyTab=b.dataset.companyTab; render();});
+  const meblModelInputs=document.querySelectorAll("[data-mebl-model]");
+  if(meblModelInputs.length){
+    meblModelInputs.forEach(el=>{el.oninput=el.onchange=()=>updateMeblValuationInteractive();});
+    const reset=document.querySelector("[data-mebl-reset]");
+    if(reset) reset.onclick=()=>{
+      meblModelInputs.forEach(el=>{if(el.dataset.modelDefault!==undefined) el.value=el.dataset.modelDefault;});
+      updateMeblValuationInteractive();
+    };
+    updateMeblValuationInteractive();
+  }
   document.querySelectorAll("[data-analysis-run]").forEach(b=>b.onclick=async()=>{
     const mode=b.dataset.analysisRun||"full";
     route.analysisMode=mode;
