@@ -104,6 +104,18 @@ function perfHTML(s,st){
 
 ;
 /* ===== assets/views-02-01.js ===== */
+function verificationBadge(status){
+  const s=String(status||"").toUpperCase();
+  if(!s) return "—";
+  const cls={VERIFIED:"verified",PROVISIONAL:"provisional",STALE:"stale",CONFLICT:"conflict",MISSING:"missing"}[s]||"missing";
+  return '<span class="verify '+cls+'">'+esc(s)+'</span>';
+}
+function coverageSummary(dc){
+  if(!dc) return "—";
+  const n=v=>Number(v||0);
+  return '<span class="coverage-mini">F '+n(dc.financial_rows)+' · R '+n(dc.ratio_rows)+' · P '+n(dc.price_rows)+' · V '+n(dc.valuation_rows)+'</span>';
+}
+
 function dashTabHTML(s,st){
   const head="<tr><th>Month</th>"+s.metrics.map(m=>'<th class="num">'+esc(m)+'</th>').join("")+"<th></th></tr>";
   const rows=(st.rows||[]).map((r,i)=>"<tr><td><input type=text data-row="+i+' data-col="month" value="'+esc(r.month||"")+'" placeholder="2026-09"></td>'
@@ -139,14 +151,17 @@ function companiesHTML(){
     const sectorLabel=c.sectorName||secName(c.sector);
     return "<tr><td class='pad'><a href='#' data-nav='company' data-id='"+esc(c.ticker)+"'><strong>"+esc(c.ticker)+"</strong></a></td>"
       +"<td class='pad'>"+esc(c.name||"—")+"</td><td class='pad'>"+esc(sectorLabel||"—")+"</td>"
-      +"<td class='pad'>"+esc(c.coverage||"—")+"</td><td class='pad num'>"+esc(c.price||"—")+"</td>"
+      +"<td class='pad'>"+esc(c.coverage||"—")+"</td>"
+      +"<td class='pad'>"+verificationBadge(c.dataCoverage&&c.dataCoverage.verification_status)+"</td>"
+      +"<td class='pad'>"+coverageSummary(c.dataCoverage)+"</td>"
+      +"<td class='pad num'>"+esc(c.price||"—")+"</td>"
       +"<td class='pad'>"+esc((c.thesis||"").slice(0,70)||"—")+"</td><td class='pad num'>"+(d===null?"—":d+"d")+"</td></tr>";
   }).join("");
   return '<h2 class="section">Company research</h2>'
     +'<p class="sub">Live PSX company universe from Supabase. Identity, price and structured financial history come from the database; your valuation and judgement notes remain personal overlays.</p>'
     +'<p><button class="btn primary" data-nav="masters">View master data</button></p>'
-    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Coverage</th><th class="num">Price</th><th>Thesis</th><th class="num">Updated</th></tr></thead><tbody>'
-    +(rows||'<tr><td class="pad empty" colspan="7">No company data available.</td></tr>')+'</tbody></table></div>';
+    +'<div class="scroll"><table><thead><tr><th>Ticker</th><th>Name</th><th>Sector</th><th>Research</th><th>Verification</th><th>Data rows</th><th class="num">Price</th><th>Thesis</th><th class="num">Updated</th></tr></thead><tbody>'
+    +(rows||'<tr><td class="pad empty" colspan="9">No company data available.</td></tr>')+'</tbody></table></div>';
 }
 
 ;
@@ -160,6 +175,7 @@ function companyHTML(t){
   const mos=(base&&price!==null)?((base-price)/base)*100:null;
   const master=masterCompanyByTicker(t);
   const masterSector=master ? (master.sector||"—") : (c.sectorName||secName(c.sector));
+  const dc=c.dataCoverage||null;
 
   const rows=(c.fy||[]).map(r=>{
     const src=safeHttpsUrl(r.source_url)
@@ -173,7 +189,8 @@ function companyHTML(t){
       +'<td class="pad num">'+esc(r.roe||"—")+'</td>'
       +'<td class="pad num">'+esc(r.dps||"—")+'</td>'
       +'<td class="pad num">'+esc(r.de||"—")+'</td>'
-      +'<td class="pad">'+src+'</td></tr>';
+      +'<td class="pad">'+verificationBadge(r.verification_status||"PROVISIONAL")+'</td>'
+      +'<td class="pad">'+src+(r.source_page?' · p. '+esc(r.source_page):'')+'</td></tr>';
   }).join("");
 
   return '<p class="meta"><a href="#" data-nav="companies">Companies</a> / '+esc(masterSector)+'</p>'
@@ -183,11 +200,18 @@ function companyHTML(t){
       +'<div class="field"><label>Master sector</label><input type="text" value="'+esc(masterSector)+'" disabled></div>'
       +'<div class="field"><label>Price Rs</label><input type="text" value="'+esc(c.price||"")+'" disabled></div>'
       +'<div class="field"><label>Shares mn</label><input type="text" value="'+esc(c.shares||"")+'" disabled></div>'
+      +'<div class="field"><label>Data verification</label><div style="padding-top:7px">'+verificationBadge(dc&&dc.verification_status)+'</div></div>'
+    +'</div>'
+    +'<div class="kpis">'
+      +'<div class="kpi"><div class="k">Financial rows</div><div class="v">'+(dc?esc(dc.financial_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Ratio rows</div><div class="v">'+(dc?esc(dc.ratio_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Price rows</div><div class="v">'+(dc?esc(dc.price_rows):"—")+'</div></div>'
+      +'<div class="kpi"><div class="k">Valuation rows</div><div class="v">'+(dc?esc(dc.valuation_rows):"—")+'</div></div>'
     +'</div>'
     +'<h3 class="block">Financial history</h3>'
     +'<p class="hint">Live structured financial data. Missing values display as — and are not estimated.</p>'
-    +'<div class="scroll"><table><thead><tr><th class="num">Year</th><th class="num">Revenue</th><th class="num">PAT</th><th class="num">EPS</th><th class="num">ROE %</th><th class="num">Dividends</th><th class="num">Debt/Equity</th><th>Source</th></tr></thead><tbody>'
-      +(rows||'<tr><td class="pad empty" colspan="8">No structured financial history available for this company yet.</td></tr>')
+    +'<div class="scroll"><table><thead><tr><th class="num">Year</th><th class="num">Revenue</th><th class="num">PAT</th><th class="num">EPS</th><th class="num">ROE %</th><th class="num">Dividends</th><th class="num">Debt/Equity</th><th>Verification</th><th>Source</th></tr></thead><tbody>'
+      +(rows||'<tr><td class="pad empty" colspan="9">No structured financial history available for this company yet.</td></tr>')
     +'</tbody></table></div>'
     +'<h3 class="block">Fair value — personal model</h3>'
     +'<div class="inline" style="margin-bottom:10px">'
