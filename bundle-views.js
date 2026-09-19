@@ -232,6 +232,17 @@ function companyBankMetrics(ticker){
 function latestBankField(rows,field){
   return rows.find(r=>num(r[field])!==null)||null;
 }
+function companyValuationScenarios(ticker){
+  const t=cleanTicker(ticker);
+  const order={BEAR:1,BASE:2,BULL:3};
+  return (initLiveState().valuationScenarios||[]).filter(x=>cleanTicker(x.ticker)===t)
+    .slice().sort((a,b)=>(order[String(a.scenario||"").toUpperCase()]||9)-(order[String(b.scenario||"").toUpperCase()]||9));
+}
+function companyLatestValuation(ticker){
+  const t=cleanTicker(ticker);
+  return (initLiveState().valuations||[]).filter(x=>cleanTicker(x.ticker)===t)
+    .slice().sort((a,b)=>String(b.as_of||"").localeCompare(String(a.as_of||"")))[0]||null;
+}
 function companyLiveEvents(ticker){
   const t=cleanTicker(ticker);
   return (initLiveState().events||[]).filter(e=>{
@@ -281,6 +292,8 @@ function bankCompanyHTML(t,c,master,dc){
   const bankRows=companyBankMetrics(t);
   const latestBank=bankRows[0]||{};
   const latestFYBank=bankRows.find(r=>r.period_type==="FY")||{};
+  const valuationScenarios=companyValuationScenarios(t);
+  const latestValuation=companyLatestValuation(t);
   const docs=companySourceDocuments(t);
   const companyEvents=companyLiveEvents(t);
   const macroEvents=(initLiveState().events||[]).filter(e=>String(e.entity_type||"").toLowerCase()==="macro")
@@ -407,26 +420,45 @@ function bankCompanyHTML(t,c,master,dc){
   } else if(tab==="valuation"){
     const base=num(c.base), bear=num(c.bear), bull=num(c.bull);
     const upside=price&&base!==null?((base-price)/price)*100:null;
-    body='<div class="valuationhero"><div><div class="analysislabel">BANK VALUATION FRAMEWORK</div><h3>P/B + sustainable ROE + payout + residual income</h3><p>MEBL now has the core bank inputs loaded: audited book value, current TTM earnings/dividend, latest ROE, capital adequacy and asset-quality metrics. A defensible intrinsic-value range still needs explicit cost-of-equity and sustainable-growth assumptions.</p></div>'
-      +'<div class="valuationstatus">'+verificationBadge("PROVISIONAL")+'<span>Inputs ready; model assumptions not yet approved</span></div></div>'
+    const baseScenario=valuationScenarios.find(x=>String(x.scenario||"").toUpperCase()==="BASE")||null;
+    const bearScenario=valuationScenarios.find(x=>String(x.scenario||"").toUpperCase()==="BEAR")||null;
+    const bullScenario=valuationScenarios.find(x=>String(x.scenario||"").toUpperCase()==="BULL")||null;
+    const scenarioCards=valuationScenarios.map(s=>{
+      const label=String(s.scenario||"").toUpperCase();
+      return '<div class="valscenario '+label.toLowerCase()+'"><div class="valscenariohead"><span>'+esc(label)+'</span>'+verificationBadge(s.verification_status||"PROVISIONAL")+'</div>'
+        +'<strong>Rs '+fmtSmart(s.blended_fair_value,2)+'</strong>'
+        +'<small>Residual income Rs '+fmtSmart(s.fair_value_primary,2)+' · DDM Rs '+fmtSmart(s.fair_value_secondary,2)+'</small>'
+        +'<dl><dt>ROE path</dt><dd>'+fmtSmart(s.sustainable_roe_year1_pct,1)+'% → '+fmtSmart(s.sustainable_roe_year5_pct,1)+'%</dd>'
+        +'<dt>Payout</dt><dd>'+fmtSmart(s.payout_pct,1)+'%</dd>'
+        +'<dt>Cost of equity</dt><dd>'+fmtSmart(s.cost_of_equity_pct,1)+'%</dd>'
+        +'<dt>Terminal ROE</dt><dd>'+fmtSmart(s.terminal_roe_pct,1)+'%</dd>'
+        +'<dt>Terminal growth</dt><dd>'+fmtSmart(s.terminal_growth_pct,1)+'%</dd>'
+        +'<dt>Vs current price</dt><dd class="'+(num(s.upside_downside_pct)>=0?"pos":"neg")+'">'+pct(num(s.upside_downside_pct))+'</dd></dl></div>';
+    }).join("");
+
+    body='<div class="valuationhero"><div><div class="analysislabel">MEBL INTRINSIC VALUE MODEL</div><h3>5-year residual income + dividend-discount cross-check</h3><p>The model uses audited FY2025 book value as the anchor and explicitly fades ROE rather than capitalising the current 34.7% indefinitely. The 12-month T-bill is the opportunity-cost anchor; cost-of-equity premiums are scenario assumptions.</p></div>'
+      +'<div class="valuationstatus">'+verificationBadge(latestValuation?latestValuation.verification_status:"MISSING")+'<span>'+(latestValuation?("Model as of "+fmtDate(latestValuation.as_of)):"No model stored")+'</span></div></div>'
       +'<div class="bank-kpis four">'
-        +'<div class="kpi"><div class="k">Price</div><div class="v">Rs '+fmt(price,2)+'</div></div>'
-        +'<div class="kpi"><div class="k">TTM EPS</div><div class="v">'+fmtSmart(ttmEPS,2)+'</div></div>'
-        +'<div class="kpi"><div class="k">P/E TTM</div><div class="v">'+(pe===null?"—":fmt(pe,2)+"x")+'</div></div>'
+        +'<div class="kpi"><div class="k">Current price</div><div class="v">Rs '+fmt(price,2)+'</div><div class="meta">'+fmtDate(master.price_date)+'</div></div>'
+        +'<div class="kpi"><div class="k">Model range</div><div class="v">Rs '+(bearScenario?fmtSmart(bearScenario.blended_fair_value,0):"—")+'–'+(bullScenario?fmtSmart(bullScenario.blended_fair_value,0):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Base fair value</div><div class="v">'+(baseScenario?"Rs "+fmtSmart(baseScenario.blended_fair_value,2):"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Base vs price</div><div class="v '+(baseScenario&&num(baseScenario.upside_downside_pct)>=0?"pos":"neg")+'">'+(baseScenario?pct(num(baseScenario.upside_downside_pct)):"—")+'</div></div>'
+      +'</div>'
+      +'<div class="valscenarios">'+(scenarioCards||'<p class="empty">No stored valuation scenarios.</p>')+'</div>'
+      +'<div class="sectionline"><h3 class="block">Verified anchors</h3><span>Facts used by the model</span></div>'
+      +'<div class="bank-kpis four">'
         +'<div class="kpi"><div class="k">FY25 BVPS</div><div class="v">Rs '+fmtSmart(bvps,2)+'</div></div>'
-        +'<div class="kpi"><div class="k">P/B</div><div class="v">'+(pb===null?"—":fmt(pb,2)+"x")+'</div></div>'
-        +'<div class="kpi"><div class="k">ROE latest</div><div class="v">'+(latestRoeRow?fmtSmart(latestRoeRow.roe_pct,2)+"%":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Latest ROE</div><div class="v">'+(latestRoeRow?fmtSmart(latestRoeRow.roe_pct,1)+"%":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">TTM EPS</div><div class="v">'+fmtSmart(ttmEPS,2)+'</div></div>'
         +'<div class="kpi"><div class="k">TTM DPS</div><div class="v">Rs '+fmtSmart(ttmDPS,2)+'</div></div>'
-        +'<div class="kpi"><div class="k">Dividend yield</div><div class="v">'+(divYield===null?"—":fmt(divYield,2)+"%")+'</div></div>'
-      +'</div>'
-      +'<div class="bank-kpis four">'
-        +'<div class="kpi"><div class="k">Earnings yield proxy</div><div class="v">'+(earningsYield===null?"—":fmt(earningsYield,2)+"%")+'</div></div>'
-        +'<div class="kpi"><div class="k">12M T-bill</div><div class="v">'+(tbill===null?"—":fmt(tbill,2)+"%")+'</div></div>'
-        +'<div class="kpi"><div class="k">Yield proxy gap</div><div class="v '+(yieldGap===null?"na":yieldGap>=0?"pos":"neg")+'">'+(yieldGap===null?"—":(yieldGap>=0?"+":"")+fmt(yieldGap,2)+"pp")+'</div></div>'
         +'<div class="kpi"><div class="k">FY25 payout</div><div class="v">'+(latestPayoutRow?fmtSmart(latestPayoutRow.payout_ratio_pct,1)+"%":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">12M T-bill</div><div class="v">'+(tbill===null?"—":fmt(tbill,2)+"%")+'</div></div>'
+        +'<div class="kpi"><div class="k">NPF / coverage</div><div class="v">'+(latestNpfRow?fmtSmart(latestNpfRow.npf_ratio_pct,2)+"%":"—")+' / '+(latestCoverageRow?fmtSmart(latestCoverageRow.coverage_ratio_pct,0)+"%":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">CAR</div><div class="v">'+(latestCarRow?(num(latestCarRow.car_pct)!==null?fmtSmart(latestCarRow.car_pct,1)+"%":"> "+fmtSmart(latestCarRow.car_min_pct,1)+"%"):"—")+'</div></div>'
       +'</div>'
-      +'<div class="noticebox"><strong>Next model step</strong><span>Set conservative cost of equity, sustainable ROE, long-run growth and payout assumptions. Until those are approved, the portal will not invent a fair-value range.</span></div>'
-      +'<div class="sectionline"><h3 class="block">Personal fair-value range</h3><span>Saved only when signed in</span></div>'
+      +'<div class="resultnotice limited"><strong>Margin of safety</strong><span>Using the Graham convention (intrinsic value minus price, divided by intrinsic value), the base-case margin of safety is '+(baseScenario?pct(num(baseScenario.margin_of_safety_pct)):"—")+'. A negative value means the market price is above that modeled intrinsic value.</span></div>'
+      +'<div class="noticebox"><strong>Model sensitivity</strong><span>This valuation is most sensitive to sustainable ROE, cost of equity and terminal growth. It is a model output, not an issuer target. If those assumptions change, the fair-value range will change materially.</span></div>'
+      +'<div class="sectionline"><h3 class="block">Personal fair-value overlay</h3><span>Optional; saved only when signed in</span></div>'
       +'<div class="inline">'
         +'<div class="field"><label>Bear Rs</label><input type="text" data-co-field="bear" value="'+esc(c.bear||"")+'"></div>'
         +'<div class="field"><label>Base Rs</label><input type="text" data-co-field="base" value="'+esc(c.base||"")+'"></div>'
@@ -434,10 +466,10 @@ function bankCompanyHTML(t,c,master,dc){
         +'<div class="field"><label>Required return %</label><input type="text" data-co-field="required" value="'+esc(c.required||"")+'"></div>'
       +'</div>'
       +'<div class="bank-kpis four" style="margin-top:14px">'
-        +'<div class="kpi"><div class="k">Base upside</div><div class="v '+(upside===null?"na":upside>=0?"pos":"neg")+'">'+(upside===null?"—":pct(upside))+'</div></div>'
-        +'<div class="kpi"><div class="k">Verified BVPS</div><div class="v">Rs '+fmtSmart(bvps,2)+'</div></div>'
-        +'<div class="kpi"><div class="k">Verified ROE</div><div class="v">'+(latestRoeRow?fmtSmart(latestRoeRow.roe_pct,2)+"%":"—")+'</div></div>'
-        +'<div class="kpi"><div class="k">Verified payout</div><div class="v">'+(latestPayoutRow?fmtSmart(latestPayoutRow.payout_ratio_pct,1)+"%":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Personal base upside</div><div class="v '+(upside===null?"na":upside>=0?"pos":"neg")+'">'+(upside===null?"—":pct(upside))+'</div></div>'
+        +'<div class="kpi"><div class="k">Current P/B</div><div class="v">'+(pb===null?"—":fmt(pb,2)+"x")+'</div></div>'
+        +'<div class="kpi"><div class="k">Model base P/B</div><div class="v">'+(latestValuation&&num(latestValuation.target_pb)!==null?fmtSmart(latestValuation.target_pb,2)+"x":"—")+'</div></div>'
+        +'<div class="kpi"><div class="k">Base required return</div><div class="v">'+(baseScenario?fmtSmart(baseScenario.cost_of_equity_pct,1)+"%":"—")+'</div></div>'
       +'</div>';
   } else if(tab==="news"){
     const own=companyEvents.map(e=>'<article class="newsitem"><div class="newsmeta"><span>'+fmtDate(e.event_date)+'</span><span>'+esc(e.event_type||"Event")+'</span><span class="material '+newsMaterialityClass(e.materiality)+'">'+esc(String(e.materiality||"—").toUpperCase())+'</span></div><h3>'+esc(e.headline||"—")+'</h3><p class="newsfact">'+esc(e.fact_summary||e.what_changed||"—")+'</p><div class="newssource">'+esc(sourceTextForEvent(e))+'</div>'+(e.required_action?'<div class="newsaction"><b>Research action</b><span>'+esc(e.required_action)+'</span></div>':"")+'</article>').join("");
@@ -456,9 +488,9 @@ function bankCompanyHTML(t,c,master,dc){
         +'<div class="analysispanel"><div class="analysislabel">QUALITY</div><div class="impactrow"><strong>ROE</strong><span>'+fmtSmart(h1.roe_pct,1)+'%</span></div><div class="impactrow"><strong>NPF / coverage</strong><span>'+fmtSmart(h1.npf_ratio_pct,2)+'% / '+fmtSmart(h1.coverage_ratio_pct,0)+'%</span></div><div class="impactrow"><strong>CAR</strong><span>'+(num(h1.car_pct)!==null?fmtSmart(h1.car_pct,1)+"%":"> "+fmtSmart(h1.car_min_pct,1)+"%")+'</span></div></div>'
         +'<div class="analysispanel"><div class="analysislabel">VALUATION CONTEXT</div><div class="impactrow"><strong>P/E</strong><span>'+(pe===null?"—":fmt(pe,2)+"x")+'</span></div><div class="impactrow"><strong>P/B on FY25 BVPS</strong><span>'+(pb===null?"—":fmt(pb,2)+"x")+'</span></div><div class="impactrow"><strong>Dividend yield</strong><span>'+(divYield===null?"—":fmt(divYield,2)+"%")+'</span></div></div>'
       +'</div>'
-      +'<div class="sectionline"><h3 class="block">What remains before intrinsic value</h3><span>Model assumptions</span></div>'
-      +'<div class="queue warn"><strong>MEBL</strong><span class="why">Approve cost of equity / required return assumptions.</span><span class="act">Valuation</span></div>'
-      +'<div class="queue warn"><strong>MEBL</strong><span class="why">Set conservative sustainable ROE, growth and payout cases for bear/base/bull residual-income valuation.</span><span class="act">Valuation</span></div>'
+      +'<div class="sectionline"><h3 class="block">Valuation model now available</h3><span>Bear / base / bull</span></div>'
+      +'<div class="queue"><strong>MEBL</strong><span class="why">Residual-income and DDM scenarios are stored in the Valuation tab with explicit ROE, payout, cost-of-equity and terminal-growth assumptions.</span><span class="act">Valuation</span></div>'
+      +'<div class="queue warn"><strong>MEBL</strong><span class="why">Re-run the model whenever policy-rate expectations, sustainable ROE or book value materially change.</span><span class="act">Monitor</span></div>'
       +'<div class="queue"><strong>MEBL</strong><span class="why">NIM remains unpopulated until an issuer-disclosed figure is verified.</span><span class="act">Data</span></div>';
   } else {
     const srcRows=docs.map(d=>'<tr><td class="pad"><strong>'+esc(d.title||d.document_type||"—")+'</strong></td><td class="pad">'+esc(d.document_type||"—")+'</td><td class="pad">'+fmtDate(d.period_end)+'</td><td class="pad">'+verificationBadge(d.verification_status)+'</td><td class="pad">'+(safeHttpsUrl(d.source_url)?'<a href="'+esc(safeHttpsUrl(d.source_url))+'" target="_blank" rel="noreferrer">Open source</a>':"—")+'</td></tr>').join("");
