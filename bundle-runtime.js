@@ -2,6 +2,7 @@
 /* ===================== binding ===================== */
 function bind(){
   document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{route.tab=b.dataset.tab; render();});
+  document.querySelectorAll("[data-company-tab]").forEach(b=>b.onclick=()=>{route.companyTab=b.dataset.companyTab; render();});
   const mark=el=>{el.onfocus=()=>typing=true; el.onblur=()=>typing=false;};
 
   document.querySelectorAll("[data-macro]").forEach(el=>{
