@@ -102,7 +102,7 @@ const FY_COLS = [["year","Year"],["rev","Revenue Rs mn"],["pat","PAT Rs mn"],["e
 let sb=null, session=null, dirtyPaths={};
 let state = { macro:{}, sectors:{}, companies:{}, portfolio:{positions:[],cash:"",capPosition:"10",capSector:"25"},
               events:[], sources:[], log:[] };
-let route = { view:"dash", id:null, tab:"reading", ticker:null, companyTab:"overview", analysisMode:"full", analysisRan:false, analysisRunning:false, analysisRanAt:null, analysisError:null };
+let route = { workspace:"investing", view:"dash", id:null, tab:"reading", ticker:null, companyTab:"overview", analysisMode:"full", analysisRan:false, analysisRunning:false, analysisRanAt:null, analysisError:null };
 let typing = false;
 SECTORS.forEach(s=> state.sectors[s.id] = { rows:[], companies:[] });
 
@@ -524,7 +524,14 @@ function researchQueue(){
 }
 
 /* ===================== nav ===================== */
+function syncWorkspaceUI(){
+  const ws=route.workspace==="trading"?"trading":"investing";
+  document.documentElement.setAttribute("data-workspace",ws);
+  document.querySelectorAll("[data-workspace-panel]").forEach(el=>{el.hidden=el.dataset.workspacePanel!==ws;});
+  document.querySelectorAll("[data-workspace-switch]").forEach(b=>b.setAttribute("aria-current",b.dataset.workspaceSwitch===ws?"true":"false"));
+}
 function renderNav(){
+  syncWorkspaceUI();
   $("#sectorNav").innerHTML = SECTORS.map(s=>{
     const d=daysSince(state.sectors[s.id].updatedAt);
     return '<button class="navbtn" data-nav="sector" data-id="'+s.id+'"><span class="dot '+ageClass(d)+'"></span>'
@@ -536,6 +543,8 @@ function renderNav(){
   });
 }
 function go(view,id){
+  if(String(view||"").startsWith("trade-")) route.workspace="trading";
+  else if(["dash","news","analysis","macro","sector","companies","masters","company","valuation","portfolio","events","queue","log","sources","method"].includes(view)) route.workspace="investing";
   if(view==="company"){
     ensureCompanyDetailFromMaster(id);
     route.view="company"; route.ticker=id; route.companyTab="overview";
@@ -546,6 +555,18 @@ function go(view,id){
 document.addEventListener("click", e=>{
   const n=e.target.closest("[data-nav]");
   if(n){ e.preventDefault(); go(n.dataset.nav, n.dataset.id); }
+});
+
+document.addEventListener("click",e=>{
+  const w=e.target.closest("[data-workspace-switch]");
+  if(!w) return;
+  e.preventDefault();
+  const ws=w.dataset.workspaceSwitch==="trading"?"trading":"investing";
+  route.workspace=ws;
+  try{localStorage.setItem("psx-workspace",ws);}catch(err){}
+  route.view=ws==="trading"?"trade-dash":"dash";
+  route.id=null; route.ticker=null;
+  renderNav(); render(); window.scrollTo(0,0);
 });
 
 ;
