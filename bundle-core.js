@@ -102,7 +102,7 @@ const FY_COLS = [["year","Year"],["rev","Revenue Rs mn"],["pat","PAT Rs mn"],["e
 let sb=null, session=null, dirtyPaths={};
 let state = { macro:{}, sectors:{}, companies:{}, portfolio:{positions:[],cash:"",capPosition:"10",capSector:"25"},
               events:[], sources:[], log:[] };
-let route = { view:"dash", id:null, tab:"reading", ticker:null };
+let route = { view:"dash", id:null, tab:"reading", ticker:null, companyTab:"overview" };
 let typing = false;
 SECTORS.forEach(s=> state.sectors[s.id] = { rows:[], companies:[] });
 
@@ -519,7 +519,7 @@ function renderNav(){
 function go(view,id){
   if(view==="company"){
     ensureCompanyDetailFromMaster(id);
-    route.view="company"; route.ticker=id;
+    route.view="company"; route.ticker=id; route.companyTab="overview";
   }
   else { route.view=view; route.id=id||null; if(view==="sector") route.tab="reading"; }
   renderNav(); render(); window.scrollTo(0,0);
@@ -528,3 +528,5 @@ document.addEventListener("click", e=>{
   const n=e.target.closest("[data-nav]");
   if(n){ e.preventDefault(); go(n.dataset.nav, n.dataset.id); }
 });
+
+;
