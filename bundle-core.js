@@ -128,6 +128,21 @@ const pct = n => n===null?"—":(n>=0?"+":"")+n.toFixed(1)+"%";
 const daysSince = ts => ts? Math.floor((Date.now()-ts)/86400000):null;
 const ageClass = d => d===null?"":d<=35?"fresh":d<=75?"aging":"stale";
 const todayISO = () => new Date().toISOString().slice(0,10);
+const fmtDate = v => {
+  if(v===null||v===undefined||String(v).trim()==="") return "—";
+  const s=String(v).trim();
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sept","Oct","Nov","Dec"];
+  let y,m,d;
+  const iso=s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(iso){ y=Number(iso[1]); m=Number(iso[2]); d=Number(iso[3]); }
+  else{
+    const dt=new Date(s);
+    if(Number.isNaN(dt.getTime())) return esc(s);
+    y=dt.getFullYear(); m=dt.getMonth()+1; d=dt.getDate();
+  }
+  if(!y||m<1||m>12||d<1||d>31) return esc(s);
+  return d+" "+months[m-1]+" "+String(y).slice(-2);
+};
 const setStatus = (t,c) => { const e=$("#status"); e.textContent=t; e.className="status "+(c||""); };
 const secName = id => (SECTORS.find(s=>s.id===id)||{}).short || id || "—";
 const opts = (list,val) => list.map(o=>'<option value="'+esc(o)+'"'+(val===o?" selected":"")+">"+esc(o||"—")+"</option>").join("");
