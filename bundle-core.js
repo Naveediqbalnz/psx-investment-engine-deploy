@@ -102,7 +102,7 @@ const FY_COLS = [["year","Year"],["rev","Revenue Rs mn"],["pat","PAT Rs mn"],["e
 let sb=null, session=null, dirtyPaths={};
 let state = { macro:{}, sectors:{}, companies:{}, portfolio:{positions:[],cash:"",capPosition:"10",capSector:"25"},
               events:[], sources:[], log:[] };
-let route = { view:"dash", id:null, tab:"reading", ticker:null, companyTab:"overview" };
+let route = { view:"dash", id:null, tab:"reading", ticker:null, companyTab:"overview", analysisMode:"full" };
 let typing = false;
 SECTORS.forEach(s=> state.sectors[s.id] = { rows:[], companies:[] });
 
